@@ -1,6 +1,6 @@
 // components/OperateurComponent.tsx
 import { Edit2, Trash2, Users, Clock, Coffee } from "lucide-react";
-import { Ouvrier } from "../data/ouVrierData";
+import { Ouvrier } from "../data/ouvrierData";
 
 interface OperateurComponentProps {
   operateur: Ouvrier;

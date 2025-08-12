@@ -4,31 +4,156 @@ import { useState } from "react";
 import MachineComponents from "./machineComponents";
 import OutilsComponents from "./outilsComponents";
 import OuvrierComponents from "./ouvrierComponents";
+import { useMachines } from "../../adapters/hooks/useMachines";
+import { useOutils } from "../../adapters/hooks/useOutils";
+import { useOuvriers } from "../../adapters/hooks/useOuvriers";
 
 export default function WorkshopComponents() {
   const [activeTab, setActiveTab] = useState('machines');
 
-  const machines = [
-    { id: 1, nom: "Presse d'assemblage #1", type: "Presse hydraulique", status: "active" as const, utilisation: 75, capacite: 2, derniereRevision: "2024-01-15", prochaineMaintenance: "2024-03-15" },
-    { id: 2, nom: "Cabine de peinture #1", type: "Cabine automatique", status: "maintenance" as const, utilisation: 0, capacite: 1, derniereRevision: "2024-02-01", prochaineMaintenance: "2024-04-01" },
-  ];
+  // Utilisation des hooks avec Clean Architecture
+  const { 
+    machines, 
+    loading: machinesLoading, 
+    error: machinesError,
+    updateMachine,
+    deleteMachine,
+    toggleMachineStatus 
+  } = useMachines();
 
-  const outils = [
-    { id: 1, nom: "Clé dynamométrique #3", type: "Outil spécialisé", quantite: 2, disponible: 1, enUse: 1, etat: "bon" as const, derniereVerification: "2024-02-01", prochaineVerification: "2024-04-01" },
-    { id: 2, nom: "Pistolet à peinture", type: "Équipement peinture", quantite: 3, disponible: 3, enUse: 0, etat: "bon" as const, derniereVerification: "2024-01-15", prochaineVerification: "2024-03-15" },
-  ];
+  const { 
+    outils, 
+    loading: outilsLoading, 
+    error: outilsError,
+    updateOutil,
+    deleteOutil,
+    reserveOutil 
+  } = useOutils();
 
-  const operateurs = [
-    { id: 1, nom: "Jean Dupont", specialite: "Assemblage", niveau: "Expert" as const, statut: "disponible" as const, heuresJour: 6.5, heuresMax: 8, competences: ["Assemblage", "Montage moteur", "Contrôle qualité"] },
-    { id: 2, nom: "Marie Martin", specialite: "Peinture", niveau: "Confirmé" as const, statut: "occupe" as const, tacheActuelle: "Peinture voiture #142", heuresJour: 7, heuresMax: 8, competences: ["Peinture", "Préparation surface"] },
-  ];
+  const { 
+    ouvriers, 
+    loading: ouvriersLoading, 
+    error: ouvriersError,
+    updateOuvrier,
+    deleteOuvrier,
+    assignTask 
+  } = useOuvriers();
+
+  const handleEditMachine = async (machine: any) => {
+    try {
+      // Ici vous pouvez ouvrir un modal d'édition
+      console.log('Edit machine:', machine);
+      // Exemple: await updateMachine(machine.id, updatedData);
+    } catch (error) {
+      console.error('Erreur lors de la modification:', error);
+    }
+  };
+
+  const handleDeleteMachine = async (id: number) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette machine ?')) {
+      try {
+        await deleteMachine(id);
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+      }
+    }
+  };
+
+  const handleToggleMachineStatus = async (id: number) => {
+    try {
+      await toggleMachineStatus(id);
+    } catch (error) {
+      console.error('Erreur lors du changement de statut:', error);
+    }
+  };
+
+  const handleEditOutil = async (outil: any) => {
+    try {
+      console.log('Edit outil:', outil);
+      // Exemple: await updateOutil(outil.id, updatedData);
+    } catch (error) {
+      console.error('Erreur lors de la modification:', error);
+    }
+  };
+
+  const handleDeleteOutil = async (id: number) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet outil ?')) {
+      try {
+        await deleteOutil(id);
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+      }
+    }
+  };
+
+  const handleReserveOutil = async (id: number) => {
+    try {
+      await reserveOutil(id);
+    } catch (error) {
+      console.error('Erreur lors de la réservation:', error);
+    }
+  };
+
+  const handleEditOuvrier = async (ouvrier: any) => {
+    try {
+      console.log('Edit ouvrier:', ouvrier);
+      // Exemple: await updateOuvrier(ouvrier.id, updatedData);
+    } catch (error) {
+      console.error('Erreur lors de la modification:', error);
+    }
+  };
+
+  const handleDeleteOuvrier = async (id: number) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet ouvrier ?')) {
+      try {
+        await deleteOuvrier(id);
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+      }
+    }
+  };
+
+  const handleAssignTask = async (id: number) => {
+    const task = prompt('Entrez la tâche à assigner:');
+    if (task) {
+      try {
+        await assignTask(id, task);
+      } catch (error) {
+        console.error('Erreur lors de l\'assignation:', error);
+      }
+    }
+  };
+
+  const renderLoadingState = (loading: boolean, error: string | null) => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      );
+    }
+    
+    if (error) {
+      return (
+        <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600">{error}</p>
+        </div>
+      );
+    }
+    
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Interface Atelier Automobile</h1>
-          <p className="text-gray-600">Gestion des ressources - Machines, Outils et Main d'œuvre</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Interface Atelier Automobile - Clean Architecture
+          </h1>
+          <p className="text-gray-600">
+            Gestion des ressources avec CRUD complet - Machines, Outils et Main d'œuvre
+          </p>
         </div>
 
         <div className="flex space-x-1 mb-6 bg-white rounded-lg p-1 border border-gray-200">
@@ -41,7 +166,7 @@ export default function WorkshopComponents() {
               }`}
           >
             <Settings className="w-4 h-4 inline-block mr-2" />
-            Machines
+            Machines ({machines.length})
           </button>
           <button
             onClick={() => setActiveTab('outils')}
@@ -52,7 +177,7 @@ export default function WorkshopComponents() {
               }`}
           >
             <Wrench className="w-4 h-4 inline-block mr-2" />
-            Outils
+            Outils ({outils.length})
           </button>
           <button
             onClick={() => setActiveTab('operateurs')}
@@ -63,44 +188,67 @@ export default function WorkshopComponents() {
             }`}
           >
             <Users className="w-4 h-4 inline-block mr-2" />
-            Main d'œuvre
+            Main d'œuvre ({ouvriers.length})
           </button>
         </div>
 
+        {/* Contenu selon l'onglet actif */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {activeTab === 'machines' && machines.map(machine => (
-            <MachineComponents 
-              key={machine.id} 
-              machine={machine}
-              onEdit={(m) => console.log('Edit machine:', m)}
-              onDelete={(id) => console.log('Delete machine:', id)}
-              onToggleStatus={(id) => console.log('Toggle machine status:', id)}
-            />
-          ))}
+          {activeTab === 'machines' && (
+            <>
+              {renderLoadingState(machinesLoading, machinesError)}
+              {!machinesLoading && !machinesError && machines.map(machine => (
+                <MachineComponents 
+                  key={machine.id} 
+                  machine={machine}
+                  onEdit={handleEditMachine}
+                  onDelete={handleDeleteMachine}
+                  onToggleStatus={handleToggleMachineStatus}
+                />
+              ))}
+            </>
+          )}
 
-          {activeTab === 'outils' && outils.map(outil => (
-            <OutilsComponents 
-              key={outil.id} 
-              outil={outil}
-              onEdit={(o) => console.log('Edit outil:', o)}
-              onDelete={(id) => console.log('Delete outil:', id)}
-              onReserver={(id) => console.log('Reserve outil:', id)}
-            />
-          ))}
+          {activeTab === 'outils' && (
+            <>
+              {renderLoadingState(outilsLoading, outilsError)}
+              {!outilsLoading && !outilsError && outils.map(outil => (
+                <OutilsComponents 
+                  key={outil.id} 
+                  outil={outil}
+                  onEdit={handleEditOutil}
+                  onDelete={handleDeleteOutil}
+                  onReserver={handleReserveOutil}
+                />
+              ))}
+            </>
+          )}
 
-          {activeTab === 'operateurs' && operateurs.map(operateur => (
-            <OuvrierComponents 
-              key={operateur.id} 
-              operateur={operateur}
-              onEdit={(o) => console.log('Edit operateur:', o)}
-              onDelete={(id) => console.log('Delete operateur:', id)}
-              onAssigner={(id) => console.log('Assign task to operateur:', id)}
-            />
-          ))}
+          {activeTab === 'operateurs' && (
+            <>
+              {renderLoadingState(ouvriersLoading, ouvriersError)}
+              {!ouvriersLoading && !ouvriersError && ouvriers.map(ouvrier => (
+                <OuvrierComponents 
+                  key={ouvrier.id} 
+                  operateur={ouvrier}
+                  onEdit={handleEditOuvrier}
+                  onDelete={handleDeleteOuvrier}
+                  onAssigner={handleAssignTask}
+                />
+              ))}
+            </>
+          )}
         </div>
 
+        {/* Bouton d'ajout flottant */}
         <div className="fixed bottom-6 right-6">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-colors">
+          <button 
+            className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-colors"
+            onClick={() => {
+              // Ouvrir un modal de création selon l'onglet actif
+              console.log(`Créer nouveau ${activeTab}`);
+            }}
+          >
             <Plus className="w-6 h-6" />
           </button>
         </div>
