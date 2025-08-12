@@ -1,12 +1,9 @@
-import PetriGraph from "./components/petriGraph";
-import PetriMatrix from "./components/petriMatrix";
+import WorkshopComponents from "./components/workshopComponents";
 
 export default function Home() {
   return (
     <div className="text-center">
-      <h1 className="">Réseau de Pétrie</h1>
-      <PetriGraph />
-      <PetriMatrix />
+      <WorkshopComponents />
     </div>
   );
 }

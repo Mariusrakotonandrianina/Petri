@@ -1,28 +1,28 @@
 "use client";
 import { Plus, Settings, Users, Wrench } from "lucide-react";
 import { useState } from "react";
-import MachineComponents from "./ouvrierComponents";
-import OutilComponents from "./outilsComponents";
+import MachineComponents from "./machineComponents";
+import OutilsComponents from "./outilsComponents";
 import OuvrierComponents from "./ouvrierComponents";
 
 export default function WorkshopComponents() {
-    
   const [activeTab, setActiveTab] = useState('machines');
 
   const machines = [
-    { id: 1, nom: "Presse d'assemblage #1", type: "Presse hydraulique", status: "active", utilisation: 75 },
-    { id: 2, nom: "Cabine de peinture #1", type: "Cabine automatique", status: "maintenance", utilisation: 0 },
+    { id: 1, nom: "Presse d'assemblage #1", type: "Presse hydraulique", status: "active" as const, utilisation: 75, capacite: 2, derniereRevision: "2024-01-15", prochaineMaintenance: "2024-03-15" },
+    { id: 2, nom: "Cabine de peinture #1", type: "Cabine automatique", status: "maintenance" as const, utilisation: 0, capacite: 1, derniereRevision: "2024-02-01", prochaineMaintenance: "2024-04-01" },
   ];
 
   const outils = [
-    { id: 1, nom: "Clé dynamométrique #3", type: "Outil spécialisé", quantite: 2, disponible: 1 },
-    { id: 2, nom: "Pistolet à peinture", type: "Équipement peinture", quantite: 3, disponible: 3 },
+    { id: 1, nom: "Clé dynamométrique #3", type: "Outil spécialisé", quantite: 2, disponible: 1, enUse: 1, etat: "bon" as const, derniereVerification: "2024-02-01", prochaineVerification: "2024-04-01" },
+    { id: 2, nom: "Pistolet à peinture", type: "Équipement peinture", quantite: 3, disponible: 3, enUse: 0, etat: "bon" as const, derniereVerification: "2024-01-15", prochaineVerification: "2024-03-15" },
   ];
 
   const operateurs = [
-    { id: 1, nom: "Jean Dupont", specialite: "Assemblage", niveau: "Expert", statut: "disponible" },
-    { id: 2, nom: "Marie Martin", specialite: "Peinture", niveau: "Confirmé", statut: "occupe", tacheActuelle: "Peinture voiture #142" },
-  ]
+    { id: 1, nom: "Jean Dupont", specialite: "Assemblage", niveau: "Expert" as const, statut: "disponible" as const, heuresJour: 6.5, heuresMax: 8, competences: ["Assemblage", "Montage moteur", "Contrôle qualité"] },
+    { id: 2, nom: "Marie Martin", specialite: "Peinture", niveau: "Confirmé" as const, statut: "occupe" as const, tacheActuelle: "Peinture voiture #142", heuresJour: 7, heuresMax: 8, competences: ["Peinture", "Préparation surface"] },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -35,10 +35,10 @@ export default function WorkshopComponents() {
           <button
             onClick={() => setActiveTab('machines')}
             className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'machines' 
-                ? 'bg-blue-100 text-blue-700' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+                activeTab === 'machines' 
+                  ? 'bg-green-100 text-green-700' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             <Settings className="w-4 h-4 inline-block mr-2" />
             Machines
@@ -46,10 +46,10 @@ export default function WorkshopComponents() {
           <button
             onClick={() => setActiveTab('outils')}
             className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'outils' 
-                ? 'bg-orange-100 text-orange-700' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+                activeTab === 'outils' 
+                  ? 'bg-green-100 text-green-700' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             <Wrench className="w-4 h-4 inline-block mr-2" />
             Outils
@@ -79,7 +79,7 @@ export default function WorkshopComponents() {
           ))}
 
           {activeTab === 'outils' && outils.map(outil => (
-            <OutilComponents 
+            <OutilsComponents 
               key={outil.id} 
               outil={outil}
               onEdit={(o) => console.log('Edit outil:', o)}
