@@ -1,7 +1,9 @@
 export interface IStorageService {
-    get<T>(key: string): T | null;
-    set<T>(key: string, value: T): void;
-    remove(key: string): void;
-    clear(): void;
-    exists(key: string): boolean;
-  }
+  get<T>(key: string): T | null;
+  set<T>(key: string, value: T): void;
+  remove(key: string): void;
+  clear(): void;
+  exists(key: string): boolean;
+  getAllKeys(): string[];
+  getSize(): number;
+}

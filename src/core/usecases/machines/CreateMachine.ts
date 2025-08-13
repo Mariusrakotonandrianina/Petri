@@ -1,26 +1,33 @@
 import { Machine } from '../../entities/Machines';
 import { IMachineRepository } from '../../interfaces/repositories/IMachineRepository';
+import { ValidationError } from '../../types/errors';
 
 export class CreateMachine {
   constructor(private machineRepository: IMachineRepository) {}
 
   async execute(data: Omit<Machine, 'id'>): Promise<Machine> {
-    // Validation des données
-    if (!data.nom || !data.type) {
-      throw new Error('Le nom et le type sont requis');
-    }
+    // Créer une instance temporaire pour validation
+    const tempMachine = Machine.create({ ...data, id: 0 });
+    const validationErrors = tempMachine.validate();
     
-    if (data.capacite <= 0) {
-      throw new Error('La capacité doit être positive');
+    if (validationErrors.length > 0) {
+      throw new ValidationError(validationErrors.join(', '));
     }
 
-    if (data.utilisation < 0 || data.utilisation > 100) {
-      throw new Error('L\'utilisation doit être entre 0 et 100%');
+    // Vérifier l'unicité du nom
+    const existingMachines = await this.machineRepository.findAll();
+    const nameExists = existingMachines.some(m => 
+      m.nom.toLowerCase().trim() === data.nom.toLowerCase().trim()
+    );
+    
+    if (nameExists) {
+      throw new ValidationError('Une machine avec ce nom existe déjà');
     }
 
+    // Créer la machine avec un ID unique
     const machine = Machine.create({
       ...data,
-      id: Date.now() + Math.random() // ID unique
+      id: Date.now() + Math.random()
     });
 
     return await this.machineRepository.save(machine);

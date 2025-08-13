@@ -1,4 +1,3 @@
-// src/infrastructure/services/InMemoryStorageService.ts
 import { IStorageService } from '../../core/interfaces/services/IStorageService';
 
 /**
@@ -7,25 +6,42 @@ import { IStorageService } from '../../core/interfaces/services/IStorageService'
  */
 export class InMemoryStorageService implements IStorageService {
   private storage: Map<string, any> = new Map();
+  private maxSize: number = 1000; // Limite de sécurité
+
+  constructor(maxSize?: number) {
+    if (maxSize) {
+      this.maxSize = maxSize;
+    }
+  }
 
   get<T>(key: string): T | null {
     try {
       const item = this.storage.get(key);
       return item !== undefined ? item : null;
     } catch (error) {
-      console.error(`Error getting item from memory storage: ${key}`, error);
+      console.error(`Erreur lors de la lecture de la clé: ${key}`, error);
       return null;
     }
   }
 
   set<T>(key: string, value: T): void {
     try {
+      // Vérification de la limite de taille
+      if (this.storage.size >= this.maxSize && !this.storage.has(key)) {
+        console.warn(`Limite de stockage atteinte (${this.maxSize}). Suppression de la plus ancienne entrée.`);
+        const firstKey = this.storage.keys().next().value;
+        if (firstKey) {
+          this.storage.delete(firstKey);
+        }
+      }
+
       // Simulation de la sérialisation/désérialisation comme localStorage
       const serialized = JSON.stringify(value);
       const deserialized = JSON.parse(serialized);
       this.storage.set(key, deserialized);
     } catch (error) {
-      console.error(`Error setting item in memory storage: ${key}`, error);
+      console.error(`Erreur lors de la sauvegarde de la clé: ${key}`, error);
+      throw new Error(`Impossible de sauvegarder les données pour la clé: ${key}`);
     }
   }
 
@@ -33,7 +49,7 @@ export class InMemoryStorageService implements IStorageService {
     try {
       this.storage.delete(key);
     } catch (error) {
-      console.error(`Error removing item from memory storage: ${key}`, error);
+      console.error(`Erreur lors de la suppression de la clé: ${key}`, error);
     }
   }
 
@@ -41,7 +57,7 @@ export class InMemoryStorageService implements IStorageService {
     try {
       this.storage.clear();
     } catch (error) {
-      console.error('Error clearing memory storage', error);
+      console.error('Erreur lors du nettoyage du stockage', error);
     }
   }
 
@@ -49,24 +65,38 @@ export class InMemoryStorageService implements IStorageService {
     try {
       return this.storage.has(key);
     } catch (error) {
-      console.error(`Error checking existence in memory storage: ${key}`, error);
+      console.error(`Erreur lors de la vérification de l'existence de la clé: ${key}`, error);
       return false;
     }
   }
 
-  // Méthodes utilitaires pour le debug
   getAllKeys(): string[] {
-    return Array.from(this.storage.keys());
+    try {
+      return Array.from(this.storage.keys());
+    } catch (error) {
+      console.error('Erreur lors de la récupération des clés', error);
+      return [];
+    }
   }
 
   getSize(): number {
-    return this.storage.size;
+    try {
+      return this.storage.size;
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la taille', error);
+      return 0;
+    }
   }
 
-  // Méthode pour sauvegarder/charger depuis un fichier JSON (pour persistence)
+  // Méthodes utilitaires pour le debug et la persistence
   exportData(): string {
-    const data = Object.fromEntries(this.storage);
-    return JSON.stringify(data, null, 2);
+    try {
+      const data = Object.fromEntries(this.storage);
+      return JSON.stringify(data, null, 2);
+    } catch (error) {
+      console.error('Erreur lors de l\'export des données', error);
+      return '{}';
+    }
   }
 
   importData(jsonData: string): void {
@@ -77,7 +107,74 @@ export class InMemoryStorageService implements IStorageService {
         this.storage.set(key, value);
       });
     } catch (error) {
-      console.error('Error importing data:', error);
+      console.error('Erreur lors de l\'import des données', error);
+      throw new Error('Données JSON invalides pour l\'import');
+    }
+  }
+
+  // Méthode pour la sauvegarde périodique (si nécessaire)
+  backup(): { timestamp: number; data: string } {
+    return {
+      timestamp: Date.now(),
+      data: this.exportData()
+    };
+  }
+
+  restore(backup: { timestamp: number; data: string }): void {
+    try {
+      this.importData(backup.data);
+      console.log(`Données restaurées depuis le backup du ${new Date(backup.timestamp).toLocaleString()}`);
+    } catch (error) {
+      console.error('Erreur lors de la restauration du backup', error);
+      throw new Error('Impossible de restaurer le backup');
+    }
+  }
+
+  // Méthode pour obtenir des statistiques
+  getStats(): {
+    totalKeys: number;
+    memoryUsage: string;
+    oldestEntry?: string;
+    newestEntry?: string;
+  } {
+    try {
+      const keys = this.getAllKeys();
+      const stats = {
+        totalKeys: keys.length,
+        memoryUsage: `${Math.round(JSON.stringify(Object.fromEntries(this.storage)).length / 1024)} KB`,
+        oldestEntry: keys.length > 0 ? keys[0] : undefined,
+        newestEntry: keys.length > 0 ? keys[keys.length - 1] : undefined
+      };
+      
+      return stats;
+    } catch (error) {
+      console.error('Erreur lors du calcul des statistiques', error);
+      return {
+        totalKeys: 0,
+        memoryUsage: '0 KB'
+      };
+    }
+  }
+
+  // Méthode pour nettoyer les entrées anciennes (si timestamp disponible)
+  cleanup(maxAge: number = 24 * 60 * 60 * 1000): number { // 24h par défaut
+    try {
+      const now = Date.now();
+      let removedCount = 0;
+      
+      for (const [key, value] of this.storage.entries()) {
+        if (value && typeof value === 'object' && value.timestamp) {
+          if (now - value.timestamp > maxAge) {
+            this.storage.delete(key);
+            removedCount++;
+          }
+        }
+      }
+      
+      return removedCount;
+    } catch (error) {
+      console.error('Erreur lors du nettoyage', error);
+      return 0;
     }
   }
 }

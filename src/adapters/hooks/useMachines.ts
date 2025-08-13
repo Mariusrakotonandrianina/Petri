@@ -1,136 +1,297 @@
-// src/adapters/hooks/useMachines.ts - Version corrigée
-import { useState, useEffect, useCallback } from 'react';
-import { Machine } from '@/core/entities/Machines';
-import { MachineController } from '../controllers/MachineController';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Machine } from '../../core/entities/Machines';
+import { MachineController, MachineControllerResponse } from '../controllers/MachineController';
 import { LocalMachineRepository } from '../../infrastructure/repositories/LocalMachineRepository';
 import { InMemoryStorageService } from '../../infrastructure/services/InMemoryStorageService';
+import { MachineFilters, MachineStats } from '../../core/usecases/machines/GetMachines';
 
-// Utilisation d'un service en mémoire au lieu de localStorage pour éviter les erreurs
-const storageService = new InMemoryStorageService();
-const machineRepository = new LocalMachineRepository(storageService);
-const machineController = new MachineController(machineRepository);
+export interface UseMachinesReturn {
+  // Data
+  machines: Machine[];
+  loading: boolean;
+  error: string | null;
+  stats: MachineStats;
+  
+  // Basic CRUD operations
+  createMachine: (data: Omit<Machine, 'id'>) => Promise<Machine>;
+  updateMachine: (id: number, data: Partial<Machine>) => Promise<Machine>;
+  deleteMachine: (id: number) => Promise<void>;
+  
+  // Additional operations
+  toggleMachineStatus: (id: number) => Promise<Machine>;
+  updateUtilisation: (id: number, utilisation: number) => Promise<Machine>;
+  scheduleMaintenance: (id: number, date: string) => Promise<Machine>;
+  
+  // Query operations
+  getMachineById: (id: number) => Promise<Machine | null>;
+  getMachinesByStatus: (status: "active" | "panne" | "maintenance") => Promise<Machine[]>;
+  getMachinesByType: (type: string) => Promise<Machine[]>;
+  searchMachines: (searchTerm: string) => Promise<Machine[]>;
+  filterMachines: (filters: MachineFilters) => Promise<Machine[]>;
+  
+  // Maintenance operations
+  getMachinesNeedingMaintenance: () => Promise<Machine[]>;
+  getMachinesNearMaintenance: (days?: number) => Promise<Machine[]>;
+  getMaintenanceAlerts: () => Promise<{ urgent: Machine[]; upcoming: Machine[] }>;
+  
+  // Utility operations
+  refreshMachines: () => Promise<void>;
+  clearError: () => void;
+  canDelete: (id: number) => Promise<{ canDelete: boolean; reason?: string }>;
+  forceDelete: (id: number) => Promise<void>;
+  machineExists: (id: number) => Promise<boolean>;
+  
+  // Available options
+  availableTypes: string[];
+  getAvailableTypes: () => Promise<string[]>;
+}
 
-export const useMachines = () => {
+// Singleton instance pour éviter la re-création
+let controllerInstance: MachineController | null = null;
+
+const getController = (): MachineController => {
+  if (!controllerInstance) {
+    const storageService = new InMemoryStorageService();
+    const machineRepository = new LocalMachineRepository(storageService);
+    controllerInstance = new MachineController(machineRepository);
+  }
+  return controllerInstance;
+};
+
+export const useMachines = (): UseMachinesReturn => {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
 
+  const controller = useMemo(() => getController(), []);
+
+  // Helper pour gérer les réponses du controller
+  const handleControllerResponse = useCallback(<T,>(
+    response: MachineControllerResponse<T>, 
+    onSuccess?: (data: T) => void
+  ): T => {
+    if (!response.success) {
+      const errorMessage = response.error || 'Une erreur est survenue';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+    setError(null);
+    if (onSuccess && response.data !== undefined) {
+      onSuccess(response.data);
+    }
+    return response.data as T;
+  }, []);
+
+  // Chargement initial des machines
   const loadMachines = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await machineController.getAllMachines();
-      setMachines(data);
+      
+      const response = await controller.getAllMachines();
+      const machinesData = handleControllerResponse(response);
+      setMachines(machinesData);
+      
+      // Charger aussi les types disponibles
+      const typesResponse = await controller.getAvailableTypes();
+      const typesData = handleControllerResponse(typesResponse);
+      setAvailableTypes(typesData);
+      
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement';
-      setError(errorMessage);
       console.error('Erreur lors du chargement des machines:', err);
     } finally {
       setLoading(false);
     }
+  }, [controller, handleControllerResponse]);
+
+  // CRUD Operations
+  const createMachine = useCallback(async (data: Omit<Machine, 'id'>): Promise<Machine> => {
+    const response = await controller.createNewMachine(data);
+    const newMachine = handleControllerResponse(response);
+    setMachines(prev => [...prev, newMachine]);
+    return newMachine;
+  }, [controller, handleControllerResponse]);
+
+  const updateMachine = useCallback(async (id: number, data: Partial<Machine>): Promise<Machine> => {
+    const response = await controller.updateExistingMachine(id, data);
+    const updatedMachine = handleControllerResponse(response);
+    setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
+    return updatedMachine;
+  }, [controller, handleControllerResponse]);
+
+  const deleteMachine = useCallback(async (id: number): Promise<void> => {
+    const response = await controller.deleteMachineById(id);
+    handleControllerResponse(response);
+    setMachines(prev => prev.filter(m => m.id !== id));
+  }, [controller, handleControllerResponse]);
+
+  // Additional operations
+  const toggleMachineStatus = useCallback(async (id: number): Promise<Machine> => {
+    const response = await controller.toggleMachineStatus(id);
+    const updatedMachine = handleControllerResponse(response);
+    setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
+    return updatedMachine;
+  }, [controller, handleControllerResponse]);
+
+  const updateUtilisation = useCallback(async (id: number, utilisation: number): Promise<Machine> => {
+    const response = await controller.updateMachineUtilisation(id, utilisation);
+    const updatedMachine = handleControllerResponse(response);
+    setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
+    return updatedMachine;
+  }, [controller, handleControllerResponse]);
+
+  const scheduleMaintenance = useCallback(async (id: number, date: string): Promise<Machine> => {
+    const response = await controller.scheduleMaintenance(id, date);
+    const updatedMachine = handleControllerResponse(response);
+    setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
+    return updatedMachine;
+  }, [controller, handleControllerResponse]);
+
+  // Query operations
+  const getMachineById = useCallback(async (id: number): Promise<Machine | null> => {
+    const response = await controller.getMachineById(id);
+    return handleControllerResponse(response);
+  }, [controller, handleControllerResponse]);
+
+  const getMachinesByStatus = useCallback(async (status: "active" | "panne" | "maintenance"): Promise<Machine[]> => {
+    const response = await controller.getMachinesByStatus(status);
+    return handleControllerResponse(response);
+  }, [controller, handleControllerResponse]);
+
+  const getMachinesByType = useCallback(async (type: string): Promise<Machine[]> => {
+    const response = await controller.getMachinesByType(type);
+    return handleControllerResponse(response);
+  }, [controller, handleControllerResponse]);
+
+  const searchMachines = useCallback(async (searchTerm: string): Promise<Machine[]> => {
+    const response = await controller.searchMachines(searchTerm);
+    return handleControllerResponse(response);
+  }, [controller, handleControllerResponse]);
+
+  const filterMachines = useCallback(async (filters: MachineFilters): Promise<Machine[]> => {
+    const response = await controller.getMachinesWithFilters(filters);
+    return handleControllerResponse(response);
+  }, [controller, handleControllerResponse]);
+
+  // Maintenance operations
+  const getMachinesNeedingMaintenance = useCallback(async (): Promise<Machine[]> => {
+    const response = await controller.getMachinesNeedingMaintenance();
+    return handleControllerResponse(response);
+  }, [controller, handleControllerResponse]);
+
+  const getMachinesNearMaintenance = useCallback(async (days: number = 7): Promise<Machine[]> => {
+    const response = await controller.getMachinesNearMaintenance(days);
+    return handleControllerResponse(response);
+  }, [controller, handleControllerResponse]);
+
+  const getMaintenanceAlerts = useCallback(async (): Promise<{ urgent: Machine[]; upcoming: Machine[] }> => {
+    const response = await controller.getMaintenanceAlerts();
+    return handleControllerResponse(response);
+  }, [controller, handleControllerResponse]);
+
+  // Utility operations
+  const refreshMachines = useCallback(async (): Promise<void> => {
+    await loadMachines();
+  }, [loadMachines]);
+
+  const clearError = useCallback((): void => {
+    setError(null);
   }, []);
 
-  const createMachine = useCallback(async (data: Omit<Machine, 'id'>) => {
-    try {
-      setError(null);
-      const newMachine = await machineController.createNewMachine(data);
-      setMachines(prev => [...prev, newMachine]);
-      return newMachine;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la création';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }, []);
+  const canDelete = useCallback(async (id: number): Promise<{ canDelete: boolean; reason?: string }> => {
+    const response = await controller.canDeleteMachine(id);
+    return handleControllerResponse(response);
+  }, [controller, handleControllerResponse]);
 
-  const updateMachine = useCallback(async (id: number, data: Partial<Machine>) => {
-    try {
-      setError(null);
-      const updatedMachine = await machineController.updateExistingMachine(id, data);
-      setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
-      return updatedMachine;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la mise à jour';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }, []);
+  const forceDelete = useCallback(async (id: number): Promise<void> => {
+    const response = await controller.forceDeleteMachine(id);
+    handleControllerResponse(response);
+    setMachines(prev => prev.filter(m => m.id !== id));
+  }, [controller, handleControllerResponse]);
 
-  const toggleMachineStatus = useCallback(async (id: number) => {
-    try {
-      setError(null);
-      const updatedMachine = await machineController.toggleMachineStatus(id);
-      setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
-      return updatedMachine;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du changement de statut';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }, []);
+  const machineExists = useCallback(async (id: number): Promise<boolean> => {
+    const response = await controller.machineExists(id);
+    return handleControllerResponse(response);
+  }, [controller, handleControllerResponse]);
 
-  const deleteMachine = useCallback(async (id: number) => {
-    try {
-      setError(null);
-      await machineController.deleteMachineById(id);
-      setMachines(prev => prev.filter(m => m.id !== id));
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }, []);
+  const getAvailableTypes = useCallback(async (): Promise<string[]> => {
+    const response = await controller.getAvailableTypes();
+    const types = handleControllerResponse(response);
+    setAvailableTypes(types);
+    return types;
+  }, [controller, handleControllerResponse]);
 
-  const getMachineById = useCallback(async (id: number) => {
-    try {
-      return await machineController.getMachineById(id);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la récupération';
-      setError(errorMessage);
-      return null;
-    }
-  }, []);
+  // Calcul des statistiques en temps réel
+  const stats = useMemo((): MachineStats => {
+    const total = machines.length;
+    const active = machines.filter(m => m.status === 'active').length;
+    const maintenance = machines.filter(m => m.status === 'maintenance').length;
+    const panne = machines.filter(m => m.status === 'panne').length;
+    const maintenanceNeeded = machines.filter(m => m.needsMaintenance()).length;
 
-  const getMachinesByStatus = useCallback(async (status: "active" | "panne" | "maintenance") => {
-    try {
-      return await machineController.getMachinesByStatus(status);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du filtrage';
-      setError(errorMessage);
-      return [];
-    }
-  }, []);
+    const averageUtilisation = total > 0 
+      ? machines.reduce((acc, m) => acc + m.utilisation, 0) / total 
+      : 0;
 
+    const totalCapacity = machines.reduce((acc, m) => acc + m.capacite, 0);
+    const effectiveCapacity = machines.reduce((acc, m) => acc + m.getEffectiveCapacity(), 0);
+
+    return {
+      total,
+      active,
+      maintenance,
+      panne,
+      averageUtilisation,
+      totalCapacity,
+      effectiveCapacity,
+      maintenanceNeeded
+    };
+  }, [machines]);
+
+  // Chargement initial
   useEffect(() => {
     loadMachines();
   }, [loadMachines]);
 
-  // Statistiques utiles
-  const stats = {
-    total: machines.length,
-    active: machines.filter(m => m.status === 'active').length,
-    maintenance: machines.filter(m => m.status === 'maintenance').length,
-    panne: machines.filter(m => m.status === 'panne').length,
-    averageUtilisation: machines.length > 0 
-      ? machines.reduce((acc, m) => acc + m.utilisation, 0) / machines.length 
-      : 0
-  };
-
   return {
+    // Data
     machines,
     loading,
     error,
     stats,
-    // CRUD operations
+    
+    // Basic CRUD operations
     createMachine,
     updateMachine,
     deleteMachine,
+    
     // Additional operations
     toggleMachineStatus,
+    updateUtilisation,
+    scheduleMaintenance,
+    
+    // Query operations
     getMachineById,
     getMachinesByStatus,
-    // Utility
-    refreshMachines: loadMachines,
-    clearError: () => setError(null)
+    getMachinesByType,
+    searchMachines,
+    filterMachines,
+    
+    // Maintenance operations
+    getMachinesNeedingMaintenance,
+    getMachinesNearMaintenance,
+    getMaintenanceAlerts,
+    
+    // Utility operations
+    refreshMachines,
+    clearError,
+    canDelete,
+    forceDelete,
+    machineExists,
+    
+    // Available options
+    availableTypes,
+    getAvailableTypes
   };
 };
