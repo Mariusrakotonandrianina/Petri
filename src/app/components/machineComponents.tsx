@@ -1,12 +1,11 @@
-// src/app/components/machineComponents.tsx - Version corrigée avec meilleure UX
+// src/app/components/machineComponents.tsx - Version corrigée pour API
 import { AlertCircle, CheckCircle, Clock, Edit2, Power, Settings, Trash2, Calendar, Activity } from "lucide-react";
-import { Machine } from "../../core/entities/Machines";
 
 interface MachineComponentProps {
-  machine: Machine;
-  onEdit?: (machine: Machine) => void;
-  onDelete?: (id: number) => void;
-  onToggleStatus?: (id: number) => void;
+  machine: any; // Type flexible pour s'adapter à la structure de votre API
+  onEdit: (machine: any) => void;
+  onDelete: (id: string | number) => void;
+  onToggleStatus: (id: string | number) => void;
 }
 
 export default function MachineComponent({
@@ -17,14 +16,16 @@ export default function MachineComponent({
 }: MachineComponentProps) {
   
   const getStatusConfig = (status: string) => {
-    switch(status) {
+    switch(status?.toLowerCase()) {
       case 'active': 
+      case 'actif':
         return {
           color: 'bg-green-100 text-green-800 border-green-200',
           icon: <CheckCircle className="w-4 h-4" />,
           label: 'Actif'
         };
       case 'panne': 
+      case 'broken':
         return {
           color: 'bg-red-100 text-red-800 border-red-200',
           icon: <AlertCircle className="w-4 h-4" />,
@@ -46,14 +47,17 @@ export default function MachineComponent({
   };
 
   const getActionButtonConfig = () => {
-    switch(machine.status) {
+    const status = machine.status?.toLowerCase();
+    switch(status) {
       case 'active': 
+      case 'actif':
         return {
           text: 'Mettre en maintenance',
           color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
           disabled: false
         };
       case 'panne': 
+      case 'broken':
         return {
           text: 'Réparer et remettre en service',
           color: 'bg-green-100 text-green-700 hover:bg-green-200',
@@ -75,14 +79,28 @@ export default function MachineComponent({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    if (!dateString) return 'Non définie';
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return 'Date invalide';
+    }
   };
 
   const getMaintenanceStatus = () => {
+    if (!machine.prochaineMaintenance) {
+      return {
+        status: 'normal',
+        text: 'Non programmée',
+        color: 'text-gray-600',
+        icon: '📅'
+      };
+    }
+
     const today = new Date();
     const maintenanceDate = new Date(machine.prochaineMaintenance);
     const daysUntilMaintenance = Math.ceil((maintenanceDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -112,16 +130,47 @@ export default function MachineComponent({
   };
 
   const getUtilisationColor = (utilisation: number) => {
-    if (utilisation === 0) return 'bg-gray-400';
+    if (!utilisation || utilisation === 0) return 'bg-gray-400';
     if (utilisation < 30) return 'bg-red-400';
     if (utilisation < 70) return 'bg-yellow-400';
     return 'bg-green-400';
   };
 
+  // Calculs sécurisés pour éviter les erreurs si les méthodes n'existent pas
+  const getEffectiveCapacity = () => {
+    if (machine.getEffectiveCapacity && typeof machine.getEffectiveCapacity === 'function') {
+      return machine.getEffectiveCapacity();
+    }
+    // Calcul manuel si la méthode n'existe pas
+    const capacite = machine.capacite || 0;
+    const utilisation = machine.utilisation || 0;
+    return Math.round(capacite * utilisation / 100);
+  };
+
+  const isOperational = () => {
+    if (machine.isOperational && typeof machine.isOperational === 'function') {
+      return machine.isOperational();
+    }
+    // Logique manuelle si la méthode n'existe pas
+    const status = machine.status?.toLowerCase();
+    return status === 'active' || status === 'actif';
+  };
+
+  const getDaysUntilMaintenance = () => {
+    if (machine.getDaysUntilMaintenance && typeof machine.getDaysUntilMaintenance === 'function') {
+      return machine.getDaysUntilMaintenance();
+    }
+    // Calcul manuel si la méthode n'existe pas
+    if (!machine.prochaineMaintenance) return 0;
+    const today = new Date();
+    const maintenanceDate = new Date(machine.prochaineMaintenance);
+    return Math.ceil((maintenanceDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
   const statusConfig = getStatusConfig(machine.status);
   const actionButtonConfig = getActionButtonConfig();
   const maintenanceStatus = getMaintenanceStatus();
-  const canDelete = machine.status !== 'active';
+  const canDelete = machine.status?.toLowerCase() !== 'active' && machine.status?.toLowerCase() !== 'actif';
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-lg transition-all duration-200 group">
@@ -133,10 +182,10 @@ export default function MachineComponent({
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg text-gray-900 truncate" title={machine.nom}>
-              {machine.nom}
+              {machine.nom || 'Machine sans nom'}
             </h3>
             <p className="text-sm text-gray-600 truncate" title={machine.type}>
-              {machine.type}
+              {machine.type || 'Type non défini'}
             </p>
           </div>
         </div>
@@ -155,7 +204,7 @@ export default function MachineComponent({
             <Edit2 className="w-4 h-4" />
           </button>
           <button
-            onClick={() => onDelete?.(machine.id)}
+            onClick={() => onDelete?.(machine.id || machine._id)}
             className={`p-2 rounded-lg transition-colors ${
               canDelete 
                 ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' 
@@ -187,7 +236,7 @@ export default function MachineComponent({
               <Activity className="w-4 h-4 text-gray-600 mr-1" />
               <span className="text-xs font-medium text-gray-600">Capacité</span>
             </div>
-            <span className="text-lg font-bold text-gray-900">{machine.capacite}</span>
+            <span className="text-lg font-bold text-gray-900">{machine.capacite || 0}</span>
             <span className="text-xs text-gray-600">u/h</span>
           </div>
           
@@ -195,7 +244,7 @@ export default function MachineComponent({
             <div className="flex items-center justify-center mb-1">
               <span className="text-xs font-medium text-gray-600">Effective</span>
             </div>
-            <span className="text-lg font-bold text-gray-900">{machine.getEffectiveCapacity()}</span>
+            <span className="text-lg font-bold text-gray-900">{getEffectiveCapacity()}</span>
             <span className="text-xs text-gray-600">u/h</span>
           </div>
         </div>
@@ -204,59 +253,21 @@ export default function MachineComponent({
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Utilisation</span>
-            <span className="text-sm font-bold text-gray-900">{machine.utilisation}%</span>
+            <span className="text-sm font-bold text-gray-900">{machine.utilisation || 0}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
             <div 
               className={`h-3 rounded-full transition-all duration-500 ${getUtilisationColor(machine.utilisation)}`}
-              style={{ width: `${machine.utilisation}%` }}
+              style={{ width: `${machine.utilisation || 0}%` }}
             />
           </div>
         </div>
-
-        {/* Dates importantes */}
-        <div className="pt-3 border-t border-gray-100 space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center text-gray-600">
-              <Calendar className="w-4 h-4 mr-1" />
-              <span>Dernière révision:</span>
-            </div>
-            <span className="font-medium text-gray-900">{formatDate(machine.derniereRevision)}</span>
-          </div>
-          
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center text-gray-600">
-              <Clock className="w-4 h-4 mr-1" />
-              <span>Prochaine maintenance:</span>
-            </div>
-            <div className="text-right">
-              <div className={`font-medium ${maintenanceStatus.color}`}>
-                {maintenanceStatus.icon} {formatDate(machine.prochaineMaintenance)}
-              </div>
-              <div className={`text-xs ${maintenanceStatus.color}`}>
-                {maintenanceStatus.text}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {maintenanceStatus.status === 'warning' && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-            <div className="flex items-center">
-              <Clock className="w-4 h-4 text-orange-600 mr-2 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-orange-800">Maintenance programmée bientôt</p>
-                <p className="text-xs text-orange-600">Prévoir l'intervention dans les prochains jours</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Bouton d'action principal */}
       <div className="mt-6 pt-4 border-t border-gray-100">
         <button
-          onClick={() => onToggleStatus?.(machine.id)}
+          onClick={() => onToggleStatus?.(machine.id || machine._id)}
           disabled={actionButtonConfig.disabled}
           className={`w-full px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${actionButtonConfig.color} ${
             actionButtonConfig.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'
@@ -275,15 +286,15 @@ export default function MachineComponent({
         <div className="flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center">
             <span className="inline-block w-2 h-2 rounded-full mr-2" 
-                  style={{ backgroundColor: machine.isOperational() ? '#10b981' : '#ef4444' }}></span>
-            <span>ID: {machine.id}</span>
+                  style={{ backgroundColor: isOperational() ? '#10b981' : '#ef4444' }}></span>
+            <span>ID: {machine.id || machine._id || 'N/A'}</span>
           </div>
           <div className="flex items-center space-x-3">
             <span title="Capacité effective">
-              {machine.getEffectiveCapacity()}/{machine.capacite} u/h
+              {getEffectiveCapacity()}/{machine.capacite || 0} u/h
             </span>
             <span title="Jours jusqu'à maintenance">
-              {machine.getDaysUntilMaintenance()}j
+              {getDaysUntilMaintenance()}j
             </span>
           </div>
         </div>

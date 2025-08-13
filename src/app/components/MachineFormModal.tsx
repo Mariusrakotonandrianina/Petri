@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Save, AlertCircle, Info, Calendar, Settings } from 'lucide-react';
-import { Machine } from '../../core/entities/Machines';
 
 interface MachineFormData {
   nom: string;
@@ -15,8 +14,8 @@ interface MachineFormData {
 interface MachineFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Omit<Machine, 'id'> | Machine) => Promise<void>;
-  machine?: Machine | null;
+  onSubmit: (data: any) => Promise<void>;
+  machine?: any | null;
   title: string;
 }
 
@@ -63,19 +62,29 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+
+  // Fonction pour formater une date en string YYYY-MM-DD
+  const formatDateForInput = (dateString: string | Date) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  };
 
   // Initialisation des données du formulaire
   useEffect(() => {
     if (machine && isOpen) {
       setFormData({
-        nom: machine.nom,
-        type: machine.type,
-        capacite: machine.capacite,
-        status: machine.status,
-        utilisation: machine.utilisation,
-        derniereRevision: machine.derniereRevision,
-        prochaineMaintenance: machine.prochaineMaintenance
+        nom: machine.nom || '',
+        type: machine.type || '',
+        capacite: machine.capacite || 1,
+        status: machine.status || 'active',
+        utilisation: machine.utilisation || 0,
+        derniereRevision: formatDateForInput(machine.derniereRevision),
+        prochaineMaintenance: formatDateForInput(machine.prochaineMaintenance)
       });
     } else if (isOpen) {
       const today = new Date().toISOString().split('T')[0];
@@ -94,7 +103,6 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
       });
     }
     setErrors({});
-    setShowPreview(false);
   }, [machine, isOpen]);
 
   // Validation du formulaire
@@ -174,13 +182,28 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const dataToSubmit = machine 
-        ? { ...machine, ...formData }
-        : { ...formData };
+      // Préparation des données pour l'API
+      const dataToSubmit = {
+        ...formData,
+        // Conversion des dates en format ISO pour l'API
+        derniereRevision: new Date(formData.derniereRevision).toISOString(),
+        prochaineMaintenance: new Date(formData.prochaineMaintenance).toISOString()
+      };
+
+      // Si c'est une modification, on inclut l'ID
+      if (machine) {
+        const finalData = {
+          id: machine.id || machine._id,
+          ...dataToSubmit
+        };
+        await onSubmit(finalData);
+      } else {
+        await onSubmit(dataToSubmit);
+      }
       
-      await onSubmit(dataToSubmit as any);
       onClose();
     } catch (error) {
+      console.error('Erreur lors de la soumission:', error);
       setErrors({
         submit: error instanceof Error ? error.message : 'Erreur lors de la sauvegarde'
       });
@@ -399,57 +422,6 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
                 Planification et aperçu
               </h3>
 
-              {/* Dates */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Dernière révision *
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="date"
-                      value={formData.derniereRevision}
-                      onChange={(e) => handleInputChange('derniereRevision', e.target.value)}
-                      className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                        errors.derniereRevision ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                  {errors.derniereRevision && (
-                    <p className="mt-1 text-xs text-red-600 flex items-start">
-                      <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0 mt-0.5" />
-                      {errors.derniereRevision}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prochaine maintenance *
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="date"
-                      value={formData.prochaineMaintenance}
-                      onChange={(e) => handleInputChange('prochaineMaintenance', e.target.value)}
-                      className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                        errors.prochaineMaintenance ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                  {errors.prochaineMaintenance && (
-                    <p className="mt-1 text-xs text-red-600 flex items-start">
-                      <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0 mt-0.5" />
-                      {errors.prochaineMaintenance}
-                    </p>
-                  )}
-                </div>
-              </div>
-
               {/* Aperçu des données calculées */}
               {formData.nom && formData.type && (
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border border-blue-200 rounded-lg p-4">
@@ -489,18 +461,6 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
                   </div>
                 </div>
               )}
-
-              {/* Alertes de validation */}
-              {previewData.isMaintenanceUrgent && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <div className="flex items-center">
-                    <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-                    <p className="text-sm text-red-700 font-medium">
-                      Maintenance urgente requise !
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -517,8 +477,8 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
           {/* Boutons d'action */}
           <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
             <div className="text-xs text-gray-500">
-              <p><strong>💡 Astuce:</strong> Utilisez Entrée pour valider ou Échap pour annuler</p>
-              <p><strong>📋 Requis:</strong> Tous les champs avec * sont obligatoires</p>
+              <p><strong>Astuce:</strong> Utilisez Entrée pour valider ou Échap pour annuler</p>
+              <p><strong>Requis:</strong> Tous les champs avec * sont obligatoires</p>
             </div>
             
             <div className="flex space-x-3">

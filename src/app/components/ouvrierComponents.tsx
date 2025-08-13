@@ -1,10 +1,9 @@
 // components/OperateurComponent.tsx
 import { Edit2, Trash2, Users, Clock, Coffee } from "lucide-react";
-import { Ouvrier } from "../data/ouvrierData";
 
 interface OperateurComponentProps {
-  operateur: Ouvrier;
-  onEdit?: (operateur: Ouvrier) => void;
+  operateur: any;
+  onEdit?: (operateur: any) => void;
   onDelete?: (id: number) => void;
   onAssigner?: (id: number) => void;
 }
@@ -140,20 +139,6 @@ export default function OperateurComponent({
             <div className="text-sm font-medium text-blue-800">{operateur.tacheActuelle}</div>
           </div>
         )}
-
-        <div className="pt-2 border-t border-gray-100">
-          <div className="text-sm text-gray-600 mb-2">Compétences:</div>
-          <div className="flex flex-wrap gap-1">
-            {operateur.competences.map((comp, index) => (
-              <span 
-                key={index}
-                className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full border border-gray-200"
-              >
-                {comp}
-              </span>
-            ))}
-          </div>
-        </div>
       </div>
 
       <button

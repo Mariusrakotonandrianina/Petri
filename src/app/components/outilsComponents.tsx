@@ -1,9 +1,8 @@
 import { Edit2, Trash2, Wrench, AlertTriangle } from "lucide-react";
-import { Outil } from "../data/outilData";
 
 interface OutilComponentProps {
-  outil: Outil;
-  onEdit?: (outil: Outil) => void;
+  outil: any;
+  onEdit?: (outil: any) => void;
   onDelete?: (id: number) => void;
   onReserver?: (id: number) => void;
 }
