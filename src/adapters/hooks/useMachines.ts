@@ -1,3 +1,4 @@
+// src/adapters/hooks/useMachines.ts - Version corrigée
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Machine } from '../../core/entities/Machines';
 import { MachineController, MachineControllerResponse } from '../controllers/MachineController';
@@ -100,6 +101,7 @@ export const useMachines = (): UseMachinesReturn => {
       
     } catch (err) {
       console.error('Erreur lors du chargement des machines:', err);
+      setError(err instanceof Error ? err.message : 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
@@ -107,87 +109,182 @@ export const useMachines = (): UseMachinesReturn => {
 
   // CRUD Operations
   const createMachine = useCallback(async (data: Omit<Machine, 'id'>): Promise<Machine> => {
-    const response = await controller.createNewMachine(data);
-    const newMachine = handleControllerResponse(response);
-    setMachines(prev => [...prev, newMachine]);
-    return newMachine;
-  }, [controller, handleControllerResponse]);
+    try {
+      setError(null);
+      const response = await controller.createNewMachine(data);
+      const newMachine = handleControllerResponse(response);
+      
+      // Recharger toutes les machines pour maintenir la cohérence
+      await loadMachines();
+      
+      return newMachine;
+    } catch (error) {
+      console.error('Erreur lors de la création:', error);
+      throw error;
+    }
+  }, [controller, handleControllerResponse, loadMachines]);
 
   const updateMachine = useCallback(async (id: number, data: Partial<Machine>): Promise<Machine> => {
-    const response = await controller.updateExistingMachine(id, data);
-    const updatedMachine = handleControllerResponse(response);
-    setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
-    return updatedMachine;
+    try {
+      setError(null);
+      const response = await controller.updateExistingMachine(id, data);
+      const updatedMachine = handleControllerResponse(response);
+      
+      // Mettre à jour la liste locale
+      setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
+      
+      return updatedMachine;
+    } catch (error) {
+      console.error('Erreur lors de la modification:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const deleteMachine = useCallback(async (id: number): Promise<void> => {
-    const response = await controller.deleteMachineById(id);
-    handleControllerResponse(response);
-    setMachines(prev => prev.filter(m => m.id !== id));
+    try {
+      setError(null);
+      const response = await controller.deleteMachineById(id);
+      handleControllerResponse(response);
+      
+      // Mettre à jour la liste locale
+      setMachines(prev => prev.filter(m => m.id !== id));
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   // Additional operations
   const toggleMachineStatus = useCallback(async (id: number): Promise<Machine> => {
-    const response = await controller.toggleMachineStatus(id);
-    const updatedMachine = handleControllerResponse(response);
-    setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
-    return updatedMachine;
+    try {
+      setError(null);
+      const response = await controller.toggleMachineStatus(id);
+      const updatedMachine = handleControllerResponse(response);
+      
+      setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
+      return updatedMachine;
+    } catch (error) {
+      console.error('Erreur lors du changement de statut:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const updateUtilisation = useCallback(async (id: number, utilisation: number): Promise<Machine> => {
-    const response = await controller.updateMachineUtilisation(id, utilisation);
-    const updatedMachine = handleControllerResponse(response);
-    setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
-    return updatedMachine;
+    try {
+      setError(null);
+      const response = await controller.updateMachineUtilisation(id, utilisation);
+      const updatedMachine = handleControllerResponse(response);
+      
+      setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
+      return updatedMachine;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'utilisation:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const scheduleMaintenance = useCallback(async (id: number, date: string): Promise<Machine> => {
-    const response = await controller.scheduleMaintenance(id, date);
-    const updatedMachine = handleControllerResponse(response);
-    setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
-    return updatedMachine;
+    try {
+      setError(null);
+      const response = await controller.scheduleMaintenance(id, date);
+      const updatedMachine = handleControllerResponse(response);
+      
+      setMachines(prev => prev.map(m => m.id === id ? updatedMachine : m));
+      return updatedMachine;
+    } catch (error) {
+      console.error('Erreur lors de la planification de maintenance:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   // Query operations
   const getMachineById = useCallback(async (id: number): Promise<Machine | null> => {
-    const response = await controller.getMachineById(id);
-    return handleControllerResponse(response);
+    try {
+      setError(null);
+      const response = await controller.getMachineById(id);
+      return handleControllerResponse(response);
+    } catch (error) {
+      console.error('Erreur lors de la recherche par ID:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const getMachinesByStatus = useCallback(async (status: "active" | "panne" | "maintenance"): Promise<Machine[]> => {
-    const response = await controller.getMachinesByStatus(status);
-    return handleControllerResponse(response);
+    try {
+      setError(null);
+      const response = await controller.getMachinesByStatus(status);
+      return handleControllerResponse(response);
+    } catch (error) {
+      console.error('Erreur lors de la recherche par statut:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const getMachinesByType = useCallback(async (type: string): Promise<Machine[]> => {
-    const response = await controller.getMachinesByType(type);
-    return handleControllerResponse(response);
+    try {
+      setError(null);
+      const response = await controller.getMachinesByType(type);
+      return handleControllerResponse(response);
+    } catch (error) {
+      console.error('Erreur lors de la recherche par type:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const searchMachines = useCallback(async (searchTerm: string): Promise<Machine[]> => {
-    const response = await controller.searchMachines(searchTerm);
-    return handleControllerResponse(response);
+    try {
+      setError(null);
+      const response = await controller.searchMachines(searchTerm);
+      return handleControllerResponse(response);
+    } catch (error) {
+      console.error('Erreur lors de la recherche:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const filterMachines = useCallback(async (filters: MachineFilters): Promise<Machine[]> => {
-    const response = await controller.getMachinesWithFilters(filters);
-    return handleControllerResponse(response);
+    try {
+      setError(null);
+      const response = await controller.getMachinesWithFilters(filters);
+      return handleControllerResponse(response);
+    } catch (error) {
+      console.error('Erreur lors du filtrage:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   // Maintenance operations
   const getMachinesNeedingMaintenance = useCallback(async (): Promise<Machine[]> => {
-    const response = await controller.getMachinesNeedingMaintenance();
-    return handleControllerResponse(response);
+    try {
+      setError(null);
+      const response = await controller.getMachinesNeedingMaintenance();
+      return handleControllerResponse(response);
+    } catch (error) {
+      console.error('Erreur lors de la recherche de machines nécessitant une maintenance:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const getMachinesNearMaintenance = useCallback(async (days: number = 7): Promise<Machine[]> => {
-    const response = await controller.getMachinesNearMaintenance(days);
-    return handleControllerResponse(response);
+    try {
+      setError(null);
+      const response = await controller.getMachinesNearMaintenance(days);
+      return handleControllerResponse(response);
+    } catch (error) {
+      console.error('Erreur lors de la recherche de machines proches de la maintenance:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const getMaintenanceAlerts = useCallback(async (): Promise<{ urgent: Machine[]; upcoming: Machine[] }> => {
-    const response = await controller.getMaintenanceAlerts();
-    return handleControllerResponse(response);
+    try {
+      setError(null);
+      const response = await controller.getMaintenanceAlerts();
+      return handleControllerResponse(response);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des alertes de maintenance:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   // Utility operations
@@ -200,26 +297,51 @@ export const useMachines = (): UseMachinesReturn => {
   }, []);
 
   const canDelete = useCallback(async (id: number): Promise<{ canDelete: boolean; reason?: string }> => {
-    const response = await controller.canDeleteMachine(id);
-    return handleControllerResponse(response);
+    try {
+      setError(null);
+      const response = await controller.canDeleteMachine(id);
+      return handleControllerResponse(response);
+    } catch (error) {
+      console.error('Erreur lors de la vérification de suppression:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const forceDelete = useCallback(async (id: number): Promise<void> => {
-    const response = await controller.forceDeleteMachine(id);
-    handleControllerResponse(response);
-    setMachines(prev => prev.filter(m => m.id !== id));
+    try {
+      setError(null);
+      const response = await controller.forceDeleteMachine(id);
+      handleControllerResponse(response);
+      
+      setMachines(prev => prev.filter(m => m.id !== id));
+    } catch (error) {
+      console.error('Erreur lors de la suppression forcée:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const machineExists = useCallback(async (id: number): Promise<boolean> => {
-    const response = await controller.machineExists(id);
-    return handleControllerResponse(response);
+    try {
+      setError(null);
+      const response = await controller.machineExists(id);
+      return handleControllerResponse(response);
+    } catch (error) {
+      console.error('Erreur lors de la vérification d\'existence:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   const getAvailableTypes = useCallback(async (): Promise<string[]> => {
-    const response = await controller.getAvailableTypes();
-    const types = handleControllerResponse(response);
-    setAvailableTypes(types);
-    return types;
+    try {
+      setError(null);
+      const response = await controller.getAvailableTypes();
+      const types = handleControllerResponse(response);
+      setAvailableTypes(types);
+      return types;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des types:', error);
+      throw error;
+    }
   }, [controller, handleControllerResponse]);
 
   // Calcul des statistiques en temps réel

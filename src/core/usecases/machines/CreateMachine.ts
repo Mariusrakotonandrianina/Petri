@@ -1,3 +1,4 @@
+// src/core/usecases/machines/CreateMachine.ts - Version corrigée
 import { Machine } from '../../entities/Machines';
 import { IMachineRepository } from '../../interfaces/repositories/IMachineRepository';
 import { ValidationError } from '../../types/errors';
@@ -24,10 +25,10 @@ export class CreateMachine {
       throw new ValidationError('Une machine avec ce nom existe déjà');
     }
 
-    // Créer la machine avec un ID unique
+    // Créer la machine avec un ID unique basé sur le timestamp et un nombre aléatoire
     const machine = Machine.create({
       ...data,
-      id: Date.now() + Math.random()
+      id: undefined // Laisser le repository gérer l'ID
     });
 
     return await this.machineRepository.save(machine);

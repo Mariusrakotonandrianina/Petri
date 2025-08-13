@@ -1,3 +1,4 @@
+// src/core/entities/Machines.ts - Version corrigée
 export class Machine {
   constructor(
     public readonly id: number,
@@ -11,8 +12,11 @@ export class Machine {
   ) {}
 
   static create(data: Omit<Machine, 'id'> & { id?: number }): Machine {
+    // Générer un ID unique si pas fourni
+    const id = data.id || Date.now() + Math.floor(Math.random() * 1000);
+    
     return new Machine(
-      data.id || Date.now() + Math.random(),
+      id,
       data.nom,
       data.type,
       data.capacite,
@@ -23,10 +27,23 @@ export class Machine {
     );
   }
 
+  // Méthode pour créer une copie avec modifications
+  clone(updates: Partial<Omit<Machine, 'id'>> = {}): Machine {
+    return new Machine(
+      this.id,
+      updates.nom ?? this.nom,
+      updates.type ?? this.type,
+      updates.capacite ?? this.capacite,
+      updates.status ?? this.status,
+      updates.utilisation ?? this.utilisation,
+      updates.derniereRevision ?? this.derniereRevision,
+      updates.prochaineMaintenance ?? this.prochaineMaintenance
+    );
+  }
+
   updateStatus(newStatus: "active" | "panne" | "maintenance"): Machine {
-    this.status = newStatus;
-    this.utilisation = newStatus === "maintenance" ? 0 : this.utilisation;
-    return this;
+    const newUtilisation = (newStatus === "maintenance" || newStatus === "panne") ? 0 : this.utilisation;
+    return this.clone({ status: newStatus, utilisation: newUtilisation });
   }
 
   isOperational(): boolean {
@@ -90,5 +107,19 @@ export class Machine {
 
   isValid(): boolean {
     return this.validate().length === 0;
+  }
+
+  // Méthode pour obtenir un objet sérialisable
+  toJSON(): any {
+    return {
+      id: this.id,
+      nom: this.nom,
+      type: this.type,
+      capacite: this.capacite,
+      status: this.status,
+      utilisation: this.utilisation,
+      derniereRevision: this.derniereRevision,
+      prochaineMaintenance: this.prochaineMaintenance
+    };
   }
 }
