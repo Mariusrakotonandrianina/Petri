@@ -1,10 +1,12 @@
+// src/adapters/hooks/useMachines.ts - Version corrigée
 import { useState, useEffect, useCallback } from 'react';
 import { Machine } from '@/core/entities/Machines';
 import { MachineController } from '../controllers/MachineController';
 import { LocalMachineRepository } from '../../infrastructure/repositories/LocalMachineRepository';
-import { LocalStorageService } from '../../infrastructure/services/LocalStorageService';
+import { InMemoryStorageService } from '../../infrastructure/services/InMemoryStorageService';
 
-const storageService = new LocalStorageService();
+// Utilisation d'un service en mémoire au lieu de localStorage pour éviter les erreurs
+const storageService = new InMemoryStorageService();
 const machineRepository = new LocalMachineRepository(storageService);
 const machineController = new MachineController(machineRepository);
 
@@ -20,7 +22,9 @@ export const useMachines = () => {
       const data = await machineController.getAllMachines();
       setMachines(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement';
+      setError(errorMessage);
+      console.error('Erreur lors du chargement des machines:', err);
     } finally {
       setLoading(false);
     }
@@ -77,18 +81,56 @@ export const useMachines = () => {
     }
   }, []);
 
+  const getMachineById = useCallback(async (id: number) => {
+    try {
+      return await machineController.getMachineById(id);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la récupération';
+      setError(errorMessage);
+      return null;
+    }
+  }, []);
+
+  const getMachinesByStatus = useCallback(async (status: "active" | "panne" | "maintenance") => {
+    try {
+      return await machineController.getMachinesByStatus(status);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du filtrage';
+      setError(errorMessage);
+      return [];
+    }
+  }, []);
+
   useEffect(() => {
     loadMachines();
   }, [loadMachines]);
+
+  // Statistiques utiles
+  const stats = {
+    total: machines.length,
+    active: machines.filter(m => m.status === 'active').length,
+    maintenance: machines.filter(m => m.status === 'maintenance').length,
+    panne: machines.filter(m => m.status === 'panne').length,
+    averageUtilisation: machines.length > 0 
+      ? machines.reduce((acc, m) => acc + m.utilisation, 0) / machines.length 
+      : 0
+  };
 
   return {
     machines,
     loading,
     error,
+    stats,
+    // CRUD operations
     createMachine,
     updateMachine,
-    toggleMachineStatus,
     deleteMachine,
-    refreshMachines: loadMachines
+    // Additional operations
+    toggleMachineStatus,
+    getMachineById,
+    getMachinesByStatus,
+    // Utility
+    refreshMachines: loadMachines,
+    clearError: () => setError(null)
   };
 };

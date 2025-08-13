@@ -1,4 +1,4 @@
-import { Machine } from '@/core/entities/Machines';
+import { Machine } from '../../entities/Machines';
 import { IMachineRepository } from '../../interfaces/repositories/IMachineRepository';
 
 export class GetMachines {

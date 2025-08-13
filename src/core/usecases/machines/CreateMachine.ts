@@ -1,29 +1,28 @@
-import { Machine } from '@/core/entities/Machines';
+import { Machine } from '../../entities/Machines';
 import { IMachineRepository } from '../../interfaces/repositories/IMachineRepository';
-import { ValidationError } from '../../types/errors';
 
 export class CreateMachine {
   constructor(private machineRepository: IMachineRepository) {}
 
   async execute(data: Omit<Machine, 'id'>): Promise<Machine> {
-    this.validate(data);
+    // Validation des données
+    if (!data.nom || !data.type) {
+      throw new Error('Le nom et le type sont requis');
+    }
     
-    const machine = Machine.create(data);
-    return await this.machineRepository.save(machine);
-  }
-
-  private validate(data: Omit<Machine, 'id'>): void {
-    if (!data.nom?.trim()) {
-      throw new ValidationError('Le nom de la machine est requis');
-    }
-    if (!data.type?.trim()) {
-      throw new ValidationError('Le type de la machine est requis');
-    }
     if (data.capacite <= 0) {
-      throw new ValidationError('La capacité doit être supérieure à 0');
+      throw new Error('La capacité doit être positive');
     }
+
     if (data.utilisation < 0 || data.utilisation > 100) {
-      throw new ValidationError('L\'utilisation doit être entre 0 et 100%');
+      throw new Error('L\'utilisation doit être entre 0 et 100%');
     }
+
+    const machine = Machine.create({
+      ...data,
+      id: Date.now() + Math.random() // ID unique
+    });
+
+    return await this.machineRepository.save(machine);
   }
 }
