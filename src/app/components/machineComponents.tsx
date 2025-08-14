@@ -1,5 +1,6 @@
-// src/app/components/machineComponents.tsx - Version corrigée pour API
-import { AlertCircle, CheckCircle, Clock, Edit2, Power, Settings, Trash2, Calendar, Activity } from "lucide-react";
+// src/app/components/machineComponents.tsx - Version corrigée avec fonctionnalités complètes
+import { AlertCircle, CheckCircle, Clock, Edit2, Power, Settings, Trash2, Calendar, Activity, AlertTriangle } from "lucide-react";
+import { useState } from "react";
 
 interface MachineComponentProps {
   machine: any; // Type flexible pour s'adapter à la structure de votre API
@@ -14,6 +15,9 @@ export default function MachineComponent({
   onDelete,
   onToggleStatus
 }: MachineComponentProps) {
+  
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
   
   const getStatusConfig = (status: string) => {
     switch(status?.toLowerCase()) {
@@ -167,6 +171,52 @@ export default function MachineComponent({
     return Math.ceil((maintenanceDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
+  // Gestion de la suppression avec confirmation
+  const handleDelete = async () => {
+    if (isDeleting) return;
+    
+    const canDelete = machine.status?.toLowerCase() !== 'active' && machine.status?.toLowerCase() !== 'actif';
+    
+    if (!canDelete) {
+      alert('⚠️ Impossible de supprimer une machine active. Veuillez d\'abord l\'arrêter ou la mettre en maintenance.');
+      return;
+    }
+
+    const confirmMessage = `🗑️ SUPPRESSION DÉFINITIVE\n\nÊtes-vous absolument sûr de vouloir supprimer la machine "${machine.nom}" ?\n\n⚠️ Cette action est irréversible !`;
+    
+    if (window.confirm(confirmMessage)) {
+      setIsDeleting(true);
+      try {
+        await onDelete(machine.id || machine._id);
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        alert(`❌ Erreur lors de la suppression: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      } finally {
+        setIsDeleting(false);
+      }
+    }
+  };
+
+  // Gestion du changement de statut
+  const handleToggleStatus = async () => {
+    if (isToggling) return;
+    
+    setIsToggling(true);
+    try {
+      await onToggleStatus(machine.id || machine._id);
+    } catch (error) {
+      console.error('Erreur lors du changement de statut:', error);
+      alert(`❌ Erreur: ${error instanceof Error ? error.message : 'Impossible de changer le statut'}`);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  // Gestion de l'édition
+  const handleEdit = () => {
+    onEdit(machine);
+  };
+
   const statusConfig = getStatusConfig(machine.status);
   const actionButtonConfig = getActionButtonConfig();
   const maintenanceStatus = getMaintenanceStatus();
@@ -192,28 +242,38 @@ export default function MachineComponent({
         
         <div className="flex items-center space-x-1 ml-2">
           {maintenanceStatus.status === 'urgent' && (
-            <div className="p-1 bg-red-100 rounded-full" title="Maintenance urgente requise !">
-              <AlertCircle className="w-4 h-4 text-red-600" />
+            <div className="p-1 bg-red-100 rounded-full animate-pulse" title="Maintenance urgente requise !">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
             </div>
           )}
           <button
-            onClick={() => onEdit?.(machine)}
+            onClick={handleEdit}
             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             title="Modifier la machine"
           >
             <Edit2 className="w-4 h-4" />
           </button>
           <button
-            onClick={() => onDelete?.(machine.id || machine._id)}
+            onClick={handleDelete}
+            disabled={!canDelete || isDeleting}
             className={`p-2 rounded-lg transition-colors ${
-              canDelete 
+              canDelete && !isDeleting
                 ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' 
                 : 'text-gray-300 cursor-not-allowed'
             }`}
-            title={canDelete ? 'Supprimer la machine' : 'Impossible de supprimer une machine active'}
-            disabled={!canDelete}
+            title={
+              !canDelete 
+                ? 'Impossible de supprimer une machine active' 
+                : isDeleting 
+                ? 'Suppression en cours...' 
+                : 'Supprimer la machine'
+            }
           >
-            <Trash2 className="w-4 h-4" />
+            {isDeleting ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
           </button>
         </div>
       </div>
@@ -262,21 +322,39 @@ export default function MachineComponent({
             />
           </div>
         </div>
+
+        {/* Informations de maintenance */}
+        <div className="bg-gray-50 rounded-lg p-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">Dernière révision:</span>
+            <span className="font-medium text-gray-900">{formatDate(machine.derniereRevision)}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm mt-1">
+            <span className="text-gray-600">Prochaine maintenance:</span>
+            <span className={`font-medium ${maintenanceStatus.color}`}>
+              {maintenanceStatus.icon} {maintenanceStatus.text}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Bouton d'action principal */}
       <div className="mt-6 pt-4 border-t border-gray-100">
         <button
-          onClick={() => onToggleStatus?.(machine.id || machine._id)}
-          disabled={actionButtonConfig.disabled}
+          onClick={handleToggleStatus}
+          disabled={actionButtonConfig.disabled || isToggling}
           className={`w-full px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${actionButtonConfig.color} ${
-            actionButtonConfig.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'
+            actionButtonConfig.disabled || isToggling ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'
           }`}
           title={actionButtonConfig.text}
         >
           <div className="flex items-center justify-center space-x-2">
-            <Power className="w-4 h-4" />
-            <span>{actionButtonConfig.text}</span>
+            {isToggling ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+            ) : (
+              <Power className="w-4 h-4" />
+            )}
+            <span>{isToggling ? 'Changement en cours...' : actionButtonConfig.text}</span>
           </div>
         </button>
       </div>
@@ -285,20 +363,31 @@ export default function MachineComponent({
       <div className="mt-4 pt-3 border-t border-gray-100">
         <div className="flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center">
-            <span className="inline-block w-2 h-2 rounded-full mr-2" 
-                  style={{ backgroundColor: isOperational() ? '#10b981' : '#ef4444' }}></span>
+            <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+              isOperational() ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+            }`}></span>
             <span>ID: {machine.id || machine._id || 'N/A'}</span>
           </div>
           <div className="flex items-center space-x-3">
             <span title="Capacité effective">
               {getEffectiveCapacity()}/{machine.capacite || 0} u/h
             </span>
-            <span title="Jours jusqu'à maintenance">
+            <span title="Jours jusqu'à maintenance" className={
+              getDaysUntilMaintenance() <= 0 ? 'text-red-600 font-semibold' :
+              getDaysUntilMaintenance() <= 7 ? 'text-orange-600 font-medium' : ''
+            }>
               {getDaysUntilMaintenance()}j
             </span>
           </div>
         </div>
       </div>
+
+      {/* Badge d'urgence si maintenance requise */}
+      {maintenanceStatus.status === 'urgent' && (
+        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-bounce">
+          ⚠️ URGENT
+        </div>
+      )}
     </div>
   );
 }

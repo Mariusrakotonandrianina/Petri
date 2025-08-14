@@ -243,6 +243,13 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
     }
   }, [isSubmitting, handleSubmit, onClose]);
 
+  // Fermeture du modal en cliquant sur le fond
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   // Calculs pour l'aperçu
   const previewData = {
     effectiveCapacity: Math.round(formData.capacite * formData.utilisation / 100),
@@ -257,12 +264,18 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        className="bg-white/95 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-t-xl backdrop-blur-sm">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
+            <div className="p-2 bg-blue-100/80 backdrop-blur-sm rounded-lg">
               <Settings className="w-6 h-6 text-blue-600" />
             </div>
             <div>
@@ -274,7 +287,7 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-white"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-white/50"
             disabled={isSubmitting}
             title="Fermer (Échap)"
           >
@@ -299,8 +312,8 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
                   type="text"
                   value={formData.nom}
                   onChange={(e) => handleInputChange('nom', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    errors.nom ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm ${
+                    errors.nom ? 'border-red-500 bg-red-50/70' : 'border-gray-300'
                   }`}
                   placeholder="Ex: Presse d'assemblage #1"
                   disabled={isSubmitting}
@@ -322,8 +335,8 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
                 <select
                   value={formData.type}
                   onChange={(e) => handleInputChange('type', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    errors.type ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm ${
+                    errors.type ? 'border-red-500 bg-red-50/70' : 'border-gray-300'
                   }`}
                   disabled={isSubmitting}
                 >
@@ -352,8 +365,8 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
                     max="1000"
                     value={formData.capacite}
                     onChange={(e) => handleInputChange('capacite', parseInt(e.target.value) || 0)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                      errors.capacite ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm ${
+                      errors.capacite ? 'border-red-500 bg-red-50/70' : 'border-gray-300'
                     }`}
                     disabled={isSubmitting}
                   />
@@ -375,8 +388,8 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
                     max="100"
                     value={formData.utilisation}
                     onChange={(e) => handleInputChange('utilisation', parseInt(e.target.value) || 0)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                      errors.utilisation ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm ${
+                      errors.utilisation ? 'border-red-500 bg-red-50/70' : 'border-gray-300'
                     }`}
                     disabled={isSubmitting || formData.status === 'maintenance' || formData.status === 'panne'}
                   />
@@ -396,7 +409,7 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
                 </label>
                 <div className="space-y-2">
                   {STATUS_OPTIONS.map(option => (
-                    <label key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <label key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50/50 cursor-pointer backdrop-blur-sm">
                       <input
                         type="radio"
                         name="status"
@@ -422,9 +435,56 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
                 Planification et aperçu
               </h3>
 
+              {/* Dates de révision et maintenance */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Calendar className="w-4 h-4 inline mr-1" />
+                    Dernière révision *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.derniereRevision}
+                    onChange={(e) => handleInputChange('derniereRevision', e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm ${
+                      errors.derniereRevision ? 'border-red-500 bg-red-50/70' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmitting}
+                  />
+                  {errors.derniereRevision && (
+                    <p className="mt-1 text-xs text-red-600 flex items-start">
+                      <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0 mt-0.5" />
+                      {errors.derniereRevision}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Calendar className="w-4 h-4 inline mr-1" />
+                    Prochaine maintenance *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.prochaineMaintenance}
+                    onChange={(e) => handleInputChange('prochaineMaintenance', e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm ${
+                      errors.prochaineMaintenance ? 'border-red-500 bg-red-50/70' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmitting}
+                  />
+                  {errors.prochaineMaintenance && (
+                    <p className="mt-1 text-xs text-red-600 flex items-start">
+                      <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0 mt-0.5" />
+                      {errors.prochaineMaintenance}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {/* Aperçu des données calculées */}
               {formData.nom && formData.type && (
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border border-blue-200 rounded-lg p-4">
+                <div className="bg-gradient-to-br from-blue-50/80 to-indigo-100/80 border border-blue-200/50 rounded-lg p-4 backdrop-blur-sm">
                   <div className="flex items-center mb-3">
                     <Info className="w-5 h-5 text-blue-600 mr-2" />
                     <h4 className="text-sm font-medium text-blue-800">Aperçu de la machine</h4>
@@ -466,7 +526,7 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
 
           {/* Erreur générale */}
           {errors.submit && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mt-6 p-4 bg-red-50/70 border border-red-200/50 rounded-lg backdrop-blur-sm">
               <div className="flex items-center">
                 <AlertCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0" />
                 <p className="text-sm text-red-600">{errors.submit}</p>
@@ -475,7 +535,7 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
           )}
 
           {/* Boutons d'action */}
-          <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200/50">
             <div className="text-xs text-gray-500">
               <p><strong>Astuce:</strong> Utilisez Entrée pour valider ou Échap pour annuler</p>
               <p><strong>Requis:</strong> Tous les champs avec * sont obligatoires</p>
@@ -485,7 +545,7 @@ const MachineFormModal: React.FC<MachineFormModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
                 disabled={isSubmitting}
               >
                 Annuler
