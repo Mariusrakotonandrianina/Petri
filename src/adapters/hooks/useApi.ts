@@ -3,7 +3,6 @@ import { useState, useCallback } from 'react';
 
 const API_BASE_URL = 'http://localhost:5000';
 
-// Types génériques
 export interface ApiResponse<T> {
   data?: T;
   message?: string;
@@ -16,7 +15,6 @@ export interface ApiError {
   code?: string;
 }
 
-// Hook générique pour les appels API
 export const useApiCall = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +58,7 @@ export const useApiCall = () => {
   return { makeApiCall, loading, error, clearError };
 };
 
-// Hook spécialisé pour les machines
+
 export const useMachinesApi = () => {
   const { makeApiCall, loading, error, clearError } = useApiCall();
 
@@ -113,7 +111,65 @@ export const useMachinesApi = () => {
   };
 };
 
-// Hook spécialisé pour les outils
+export const useAteliersApi = () => {
+  const { makeApiCall, loading, error, clearError } = useApiCall();
+
+  const getAteliers = useCallback(async () => {
+    const response = await makeApiCall<any>('/ateliers');
+    return Array.isArray(response) ? response : response.data || [];
+  }, [makeApiCall]);
+
+  const getAtelier = useCallback(async (id: string | number) => {
+    return await makeApiCall<any>(`/ateliers/${id}`);
+  }, [makeApiCall]);
+
+  const createAtelier = useCallback(async (atelierData: any) => {
+    return await makeApiCall<any>('/ateliers', {
+      method: 'POST',
+      body: JSON.stringify(atelierData),
+    });
+  }, [makeApiCall]);
+
+  const updateAtelier = useCallback(async (id: string | number, atelierData: any) => {
+    return await makeApiCall<any>(`/ateliers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(atelierData),
+    });
+  }, [makeApiCall]);
+
+  const deleteAtelier = useCallback(async (id: string | number) => {
+    return await makeApiCall<any>(`/ateliers/${id}`, {
+      method: 'DELETE',
+    });
+  }, [makeApiCall]);
+
+  const filterByStatus = useCallback(async (status: string) => {
+    return await makeApiCall<any>(`/ateliers/status/${status}`);
+  }, [makeApiCall]);
+
+  const filterByLocalisation = useCallback(async (localisation: string) => {
+    return await makeApiCall<any>(`/ateliers/localisation/${localisation}`);
+  }, [makeApiCall]);
+
+  const listLocalisations = useCallback(async () => {
+    return await makeApiCall<any>(`/ateliers/meta/localisations`);
+  }, [makeApiCall]);
+
+  return {
+    getAteliers,
+    getAtelier,
+    createAtelier,
+    updateAtelier,
+    deleteAtelier,
+    filterByStatus,
+    filterByLocalisation,
+    listLocalisations,
+    loading,
+    error,
+    clearError,
+  };
+};
+
 export const useOutilsApi = () => {
   const { makeApiCall, loading, error, clearError } = useApiCall();
 
@@ -165,7 +221,6 @@ export const useOutilsApi = () => {
   };
 };
 
-// Hook spécialisé pour les ouvriers
 export const useOuvriersApi = () => {
   const { makeApiCall, loading, error, clearError } = useApiCall();
 
@@ -217,25 +272,27 @@ export const useOuvriersApi = () => {
   };
 };
 
-// Hook combiné pour toutes les ressources
 export const useWorkshopApi = () => {
   const machinesApi = useMachinesApi();
   const outilsApi = useOutilsApi();
   const ouvriersApi = useOuvriersApi();
+  const ateliersApis = useAteliersApi();
 
-  const isLoading = machinesApi.loading || outilsApi.loading || ouvriersApi.loading;
-  const hasError = machinesApi.error || outilsApi.error || ouvriersApi.error;
+  const isLoading = machinesApi.loading || outilsApi.loading || ouvriersApi.loading || ateliersApis.loading;
+  const hasError = machinesApi.error || outilsApi.error || ouvriersApi.error || ateliersApis.error;
 
   const clearAllErrors = useCallback(() => {
     machinesApi.clearError();
     outilsApi.clearError();
     ouvriersApi.clearError();
-  }, [machinesApi.clearError, outilsApi.clearError, ouvriersApi.clearError]);
+    ateliersApis.clearError();
+  }, [machinesApi.clearError, outilsApi.clearError, ouvriersApi.clearError, ateliersApis.clearError]);
 
   return {
     machines: machinesApi,
     outils: outilsApi,
     ouvriers: ouvriersApi,
+    ateliers: ateliersApis,
     isLoading,
     hasError,
     clearAllErrors,
@@ -272,7 +329,6 @@ export const checkApiConnection = async (): Promise<boolean> => {
   }
 };
 
-// Types d'exportation
 export interface Machine {
   id?: string | number;
   _id?: string;
@@ -281,8 +337,6 @@ export interface Machine {
   capacite: number;
   status: 'active' | 'panne' | 'maintenance';
   utilisation: number;
-  derniereRevision: string;
-  prochaineMaintenance: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -306,6 +360,18 @@ export interface Ouvrier {
   specialite: string;
   disponible: boolean;
   heuresTravail?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Atelier {
+  id?: string | number;
+  _id?: string;
+  nom: string;
+  localisation: string;
+  superficie: number;
+  capaciteEmployes: number;
+  status: 'actif' | 'fermé' | 'maintenance';
   createdAt?: string;
   updatedAt?: string;
 }

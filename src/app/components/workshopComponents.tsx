@@ -4,7 +4,7 @@ import { Plus, Settings, Users, Wrench, AlertCircle, RefreshCw } from "lucide-re
 import { useState, useEffect } from "react";
 import MachineComponents from "./machineComponents";
 import MachineFormModal from "./MachineFormModal";
-import { useWorkshopApi, Machine, Outil, Ouvrier } from "../../adapters/hooks/useApi";
+import { useWorkshopApi, Machine, Outil, Ouvrier, Atelier } from "../../adapters/hooks/useApi";
 
 export default function WorkshopComponents() {
   const [activeTab, setActiveTab] = useState<'machines' | 'outils' | 'ouvriers'>('machines');
@@ -15,6 +15,9 @@ export default function WorkshopComponents() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [outils, setOutils] = useState<Outil[]>([]);
   const [ouvriers, setOuvriers] = useState<Ouvrier[]>([]);
+  const [ateliers, setAteliers] = useState<Atelier[]>([]);
+  const [selectedAtelier, setSelectedAtelier] = useState<Atelier | null>(null);
+
 
   // Utilisation du hook API combiné
   const workshopApi = useWorkshopApi();
@@ -446,6 +449,7 @@ export default function WorkshopComponents() {
               }
             </>
           )}
+        
         </div>
 
         {/* Bouton d'ajout flottant - uniquement pour les machines */}
