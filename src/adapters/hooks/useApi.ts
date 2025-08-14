@@ -353,13 +353,18 @@ export interface Outil {
 }
 
 export interface Ouvrier {
+  disponible: boolean;
   id?: string | number;
   _id?: string;
   nom: string;
   prenom: string;
+  niveau: 'Débutant' | 'Intermédiaire' | 'Expert';
   specialite: string;
-  disponible: boolean;
-  heuresTravail?: number;
+  tacheActuelle: string;
+  status: 'disponible' | 'occupé' | 'absent';
+  competences: string[];
+  heuresJour: number;
+  heuresMax: number;
   createdAt?: string;
   updatedAt?: string;
 }

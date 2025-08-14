@@ -135,11 +135,6 @@ export default function AtelierComponent({
           {isToggling ? "Changement en cours..." : "Changer le statut"}
         </button>
       </div>
-
-      {/* Footer */}
-      <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500">
-        Créé le : {atelier.createdAt ? new Date(atelier.createdAt).toLocaleDateString() : "N/A"}
-      </div>
     </div>
   );
 }

@@ -1,129 +1,447 @@
-// src/app/components/AtelierComponent.tsx
-import { Building2, MapPin, Users, Ruler, Edit2, Trash2, Power, CheckCircle, AlertCircle, Clock } from "lucide-react";
-import { useState } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Building2, MapPin, Users, Ruler, X, Save, AlertCircle, Info } from "lucide-react";
 
 interface Atelier {
+  id?: string | number;
   _id?: string;
   nom: string;
   localisation: string;
   superficie: number;
   capaciteEmployes: number;
-  status: "actif" | "inactif" | "maintenance";
+  status: 'actif' | 'fermé' | 'maintenance';
   createdAt?: string;
+  updatedAt?: string;
 }
 
-interface AtelierComponentProps {
-  atelier: Atelier;
-  onEdit: (atelier: Atelier) => void;
-  onDelete: (id: string) => void;
-  onToggleStatus: (id: string) => void;
+interface AtelierFormModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: any) => Promise<void>;
+  atelier: Atelier | null;
 }
 
-export default function AtelierComponent({ atelier, onEdit, onDelete, onToggleStatus }: AtelierComponentProps) {
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
+const STATUS_OPTIONS = [
+  { value: 'actif', label: '🟢 Actif', description: 'Atelier en fonctionnement normal' },
+  { value: 'maintenance', label: '🟡 En maintenance', description: 'Maintenance préventive en cours' },
+  { value: 'fermé', label: '🔴 Fermé', description: 'Atelier temporairement fermé' }
+] as const;
 
-  const getStatusConfig = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "actif":
-        return { color: "bg-green-100 text-green-800", icon: <CheckCircle className="w-4 h-4" />, label: "Actif" };
-      case "maintenance":
-        return { color: "bg-yellow-100 text-yellow-800", icon: <Clock className="w-4 h-4" />, label: "Maintenance" };
-      case "inactif":
-        return { color: "bg-red-100 text-red-800", icon: <AlertCircle className="w-4 h-4" />, label: "Inactif" };
-      default:
-        return { color: "bg-gray-100 text-gray-800", icon: <Power className="w-4 h-4" />, label: "Inconnu" };
+const LOCALISATIONS_SUGGESTIONS = [
+  'Bâtiment A - Niveau 1',
+  'Bâtiment A - Niveau 2', 
+  'Bâtiment B - Niveau 1',
+  'Bâtiment B - Niveau 2',
+  'Zone Industrielle Nord',
+  'Zone Industrielle Sud',
+  'Hangar Principal',
+  'Atelier Externe',
+  'Zone de Production',
+  'Zone d\'Assemblage'
+];
+
+const AtelierFormModal: React.FC<AtelierFormModalProps> = ({ isOpen, onClose, onSubmit, atelier }) => {
+  const [formData, setFormData] = useState({
+    nom: '',
+    localisation: '',
+    superficie: 0,
+    capaciteEmployes: 0,
+    status: 'actif' as 'actif' | 'fermé' | 'maintenance'
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCustomLocation, setShowCustomLocation] = useState(false);
+
+  useEffect(() => {
+    if (atelier && isOpen) {
+      setFormData({
+        nom: atelier.nom,
+        localisation: atelier.localisation,
+        superficie: atelier.superficie,
+        capaciteEmployes: atelier.capaciteEmployes,
+        status: atelier.status
+      });
+      setShowCustomLocation(!LOCALISATIONS_SUGGESTIONS.includes(atelier.localisation));
+    } else if (isOpen) {
+      setFormData({
+        nom: '',
+        localisation: '',
+        superficie: 0,
+        capaciteEmployes: 0,
+        status: 'actif'
+      });
+      setShowCustomLocation(false);
     }
-  };
+    setErrors({});
+  }, [atelier, isOpen]);
 
-  const handleDelete = async () => {
-    if (isDeleting) return;
-    if (!window.confirm(`Supprimer l'atelier "${atelier.nom}" ?`)) return;
-    setIsDeleting(true);
+  const validateForm = useCallback((): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.nom.trim()) {
+      newErrors.nom = "Le nom de l'atelier est requis";
+    } else if (formData.nom.trim().length < 3) {
+      newErrors.nom = "Le nom doit contenir au moins 3 caractères";
+    } else if (formData.nom.trim().length > 50) {
+      newErrors.nom = "Le nom ne peut pas dépasser 50 caractères";
+    }
+
+    if (!formData.localisation.trim()) {
+      newErrors.localisation = "La localisation est requise";
+    } else if (formData.localisation.trim().length < 3) {
+      newErrors.localisation = "La localisation doit contenir au moins 3 caractères";
+    }
+
+    if (formData.superficie <= 0) {
+      newErrors.superficie = "La superficie doit être supérieure à 0";
+    } else if (formData.superficie > 10000) {
+      newErrors.superficie = "La superficie ne peut pas dépasser 10 000 m²";
+    }
+
+    if (formData.capaciteEmployes <= 0) {
+      newErrors.capaciteEmployes = "La capacité doit être supérieure à 0";
+    } else if (formData.capaciteEmployes > 1000) {
+      newErrors.capaciteEmployes = "La capacité ne peut pas dépasser 1 000 employés";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      await onDelete(atelier._id || "");
+      const dataToSubmit = { ...formData };
+      if (atelier) {
+        await onSubmit({ id: atelier.id || atelier._id, ...dataToSubmit });
+      } else {
+        await onSubmit(dataToSubmit);
+      }
+      onClose();
+    } catch (error) {
+      console.error('Erreur lors de la soumission:', error);
+      setErrors({
+        submit: error instanceof Error ? error.message : 'Erreur lors de la sauvegarde'
+      });
     } finally {
-      setIsDeleting(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleToggleStatus = async () => {
-    if (isToggling) return;
-    setIsToggling(true);
-    try {
-      await onToggleStatus(atelier._id || "");
-    } finally {
-      setIsToggling(false);
+  const handleInputChange = useCallback((field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  }, [errors]);
+
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !isSubmitting) {
+      e.preventDefault();
+      handleSubmit();
+    } else if (e.key === 'Escape') {
+      onClose();
+    }
+  }, [isSubmitting, handleSubmit, onClose]);
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
     }
   };
 
-  const statusConfig = getStatusConfig(atelier.status);
+  const handleLocationSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === 'custom') {
+      setShowCustomLocation(true);
+      handleInputChange('localisation', '');
+    } else {
+      setShowCustomLocation(false);
+      handleInputChange('localisation', value);
+    }
+  };
+
+  const previewData = {
+    densiteEmployes: formData.superficie > 0 ? Math.round((formData.capaciteEmployes / formData.superficie) * 100) / 100 : 0,
+    efficienceEspace: formData.superficie > 0 && formData.capaciteEmployes > 0 ? Math.round(formData.superficie / formData.capaciteEmployes * 10) / 10 : 0
+  };
+
+  if (!isOpen) return null;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-lg transition-all duration-200">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Building2 className="w-6 h-6 text-blue-600" />
+    <div 
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        className="bg-white/95 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-t-xl backdrop-blur-sm">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-100/80 backdrop-blur-sm rounded-lg">
+              <Building2 className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {atelier ? 'Modifier l\'atelier' : 'Créer un nouvel atelier'}
+              </h2>
+              <p className="text-sm text-gray-600">
+                {atelier ? 'Modifier les informations' : 'Ajouter un nouvel atelier'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-lg">{atelier.nom}</h3>
-            <p className="text-sm text-gray-600 flex items-center">
-              <MapPin className="w-4 h-4 mr-1" /> {atelier.localisation}
-            </p>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-white/50"
+            disabled={isSubmitting}
+            title="Fermer (Échap)"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6" onKeyDown={handleKeyPress}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Formulaire principal */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
+                Informations principales
+              </h3>
+
+              {/* Nom de l'atelier */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom de l'atelier *
+                </label>
+                <input
+                  type="text"
+                  value={formData.nom}
+                  onChange={(e) => handleInputChange('nom', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm ${
+                    errors.nom ? 'border-red-500 bg-red-50/70' : 'border-gray-300'
+                  }`}
+                  placeholder="Ex: Atelier Principal, Zone de Production..."
+                  disabled={isSubmitting}
+                  maxLength={50}
+                />
+                {errors.nom && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                    {errors.nom}
+                  </p>
+                )}
+              </div>
+
+              {/* Localisation */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Localisation *
+                </label>
+                <select
+                  value={showCustomLocation ? 'custom' : formData.localisation}
+                  onChange={handleLocationSelect}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm ${
+                    errors.localisation ? 'border-red-500 bg-red-50/70' : 'border-gray-300'
+                  }`}
+                  disabled={isSubmitting}
+                >
+                  <option value="">Sélectionner une localisation</option>
+                  {LOCALISATIONS_SUGGESTIONS.map(localisation => (
+                    <option key={localisation} value={localisation}>{localisation}</option>
+                  ))}
+                  <option value="custom">Autre (saisie personnalisée)</option>
+                </select>
+                
+                {showCustomLocation && (
+                  <input
+                    type="text"
+                    value={formData.localisation}
+                    onChange={(e) => handleInputChange('localisation', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm mt-2"
+                    placeholder="Saisissez une localisation personnalisée..."
+                    disabled={isSubmitting}
+                  />
+                )}
+                
+                {errors.localisation && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                    {errors.localisation}
+                  </p>
+                )}
+              </div>
+
+              {/* Superficie et Capacité */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Superficie (m²) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    value={formData.superficie || ''}
+                    onChange={(e) => handleInputChange('superficie', parseInt(e.target.value) || 0)}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm ${
+                      errors.superficie ? 'border-red-500 bg-red-50/70' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmitting}
+                  />
+                  {errors.superficie && (
+                    <p className="mt-1 text-xs text-red-600 flex items-start">
+                      <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0 mt-0.5" />
+                      {errors.superficie}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Capacité max *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={formData.capaciteEmployes || ''}
+                    onChange={(e) => handleInputChange('capaciteEmployes', parseInt(e.target.value) || 0)}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white/70 backdrop-blur-sm ${
+                      errors.capaciteEmployes ? 'border-red-500 bg-red-50/70' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmitting}
+                  />
+                  {errors.capaciteEmployes && (
+                    <p className="mt-1 text-xs text-red-600 flex items-start">
+                      <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0 mt-0.5" />
+                      {errors.capaciteEmployes}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Statut */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Statut de l'atelier
+                </label>
+                <div className="space-y-2">
+                  {STATUS_OPTIONS.map(option => (
+                    <label key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50/50 cursor-pointer backdrop-blur-sm">
+                      <input
+                        type="radio"
+                        name="status"
+                        value={option.value}
+                        checked={formData.status === option.value}
+                        onChange={(e) => handleInputChange('status', e.target.value)}
+                        className="text-blue-600 focus:ring-blue-500"
+                        disabled={isSubmitting}
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{option.label}</div>
+                        <div className="text-xs text-gray-500">{option.description}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Aperçu */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
+                Aperçu
+              </h3>
+              <div className="bg-gradient-to-br from-blue-50/80 to-indigo-100/80 border border-blue-200/50 rounded-lg p-4 backdrop-blur-sm">
+                <div className="flex items-center mb-3">
+                  <Info className="w-5 h-5 text-blue-600 mr-2" />
+                  <h4 className="text-sm font-medium text-blue-800">Aperçu de l'atelier</h4>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-blue-700">Atelier:</span>
+                    <span className="font-medium text-blue-900">{formData.nom || 'Non défini'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-blue-700">Localisation:</span>
+                    <span className="font-medium text-blue-900 text-right ml-2">{formData.localisation || 'Non définie'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-blue-700">Superficie:</span>
+                    <span className="font-medium text-blue-900">{formData.superficie} m²</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-blue-700">Capacité max:</span>
+                    <span className="font-medium text-blue-900">{formData.capaciteEmployes} employés</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-blue-700">Densité:</span>
+                    <span className="font-medium text-blue-900">{previewData.densiteEmployes} emp/m²</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-blue-700">Espace par employé:</span>
+                    <span className="font-medium text-blue-900">{previewData.efficienceEspace} m²</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Erreur de soumission */}
+          {errors.submit && (
+            <div className="mt-6 p-4 bg-red-50/70 border border-red-200/50 rounded-lg backdrop-blur-sm">
+              <div className="flex items-center">
+                <AlertCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0" />
+                <p className="text-sm text-red-600">{errors.submit}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200/50">
+            <div className="text-xs text-gray-500">
+              <p><strong>Astuce:</strong> Utilisez Entrée pour valider ou Échap pour annuler</p>
+              <p><strong>Requis:</strong> Tous les champs avec * sont obligatoires</p>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
+                disabled={isSubmitting}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting || Object.keys(errors).length > 0}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Sauvegarde...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    {atelier ? 'Modifier' : 'Créer'}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
-        <div className="flex space-x-1">
-          <button onClick={() => onEdit(atelier)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
-            <Edit2 className="w-4 h-4" />
-          </button>
-          <button onClick={handleDelete} disabled={isDeleting} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-            {isDeleting ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" /> : <Trash2 className="w-4 h-4" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Statut */}
-      <div className="flex justify-between mb-3">
-        <span className="text-sm font-medium text-gray-700">Statut</span>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${statusConfig.color}`}>
-          {statusConfig.icon}
-          <span>{statusConfig.label}</span>
-        </span>
-      </div>
-
-      {/* Infos principales */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
-          <Users className="w-4 h-4 text-gray-600 mx-auto mb-1" />
-          <span className="text-lg font-bold">{atelier.capaciteEmployes}</span>
-          <span className="text-xs text-gray-600 block">Employés max</span>
-        </div>
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
-          <Ruler className="w-4 h-4 text-gray-600 mx-auto mb-1" />
-          <span className="text-lg font-bold">{atelier.superficie} m²</span>
-          <span className="text-xs text-gray-600 block">Superficie</span>
-        </div>
-      </div>
-
-      {/* Bouton action */}
-      <div className="mt-6">
-        <button
-          onClick={handleToggleStatus}
-          disabled={isToggling}
-          className={`w-full px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-            atelier.status === "actif" ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" : "bg-green-100 text-green-700 hover:bg-green-200"
-          }`}
-        >
-          {isToggling ? "Changement..." : atelier.status === "actif" ? "Mettre en maintenance" : "Activer"}
-        </button>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500 flex justify-between">
-        <span>ID: {atelier._id}</span>
-        {atelier.createdAt && <span>Créé le {new Date(atelier.createdAt).toLocaleDateString()}</span>}
       </div>
     </div>
   );
-}
+};
+
+export default AtelierFormModal;
