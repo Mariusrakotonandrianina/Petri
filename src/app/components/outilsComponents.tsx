@@ -1,10 +1,23 @@
-import { Edit2, Trash2, Wrench, AlertTriangle } from "lucide-react";
+import { Edit2, Trash2, Wrench, AlertTriangle, Info } from "lucide-react";
+
+interface Outil {
+  _id?: string;
+  id?: number;
+  nom: string;
+  type: string;
+  quantite: number;
+  disponible: number;
+  enUse: number;
+  etat?: "bon" | "usure" | "reparation" | string;
+  derniereVerification?: string;
+  prochaineVerification?: string;
+}
 
 interface OutilComponentProps {
-  outil: any;
-  onEdit?: (outil: any) => void;
-  onDelete?: (id: number) => void;
-  onReserver?: (id: number) => void;
+  outil: Outil;
+  onEdit?: (outil: Outil) => void;
+  onDelete?: (id: string | number) => void;
+  onReserver?: (id: string | number) => void;
 }
 
 export default function OutilComponent({
@@ -16,41 +29,52 @@ export default function OutilComponent({
 
   const getEtatColor = (etat: string) => {
     switch(etat) {
-      case 'bon': return 'bg-green-100 text-green-800 border-green-200';
-      case 'usure': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'reparation': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case "bon": return "bg-green-100 text-green-800 border-green-200";
+      case "usure": return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "reparation": return "bg-red-100 text-red-800 border-red-200";
+      default: return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   const getIconColor = () => {
     switch(outil.etat) {
-      case 'bon': return 'text-orange-600';
-      case 'usure': return 'text-yellow-600';
-      case 'reparation': return 'text-red-600';
-      default: return 'text-gray-600';
+      case "bon": return "text-orange-600";
+      case "usure": return "text-yellow-600";
+      case "reparation": return "text-red-600";
+      default: return "text-gray-600";
     }
   };
 
-  const isReservable = outil.disponible > 0 && outil.etat === 'bon';
+  const formatDate = (date?: string) => {
+    if (!date) return "—";
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? date : d.toLocaleDateString("fr-FR");
+  };
+
+  const etat = outil.etat ?? "inconnu";
+  const isReservable = outil.disponible > 0 && etat === "bon";
+  const utilisationPourcentage = outil.quantite > 0 
+    ? (outil.enUse / outil.quantite) * 100 
+    : 0;
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+      {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-orange-100 rounded-lg">
-            {outil.etat === 'reparation' ? (
-              <AlertTriangle className={`w-6 h-6 ${getIconColor()}`} />
-            ) : (
-              <Wrench className={`w-6 h-6 ${getIconColor()}`} />
-            )}
+            {etat === "reparation" 
+              ? <AlertTriangle className={`w-6 h-6 ${getIconColor()}`} />
+              : <Wrench className={`w-6 h-6 ${getIconColor()}`} />
+            }
           </div>
           <div>
             <h3 className="font-semibold text-lg text-gray-900">{outil.nom}</h3>
             <p className="text-sm text-gray-600">{outil.type}</p>
           </div>
         </div>
-        
+
+        {/* Actions */}
         <div className="flex items-center space-x-2">
           <button
             onClick={() => onEdit?.(outil)}
@@ -60,7 +84,7 @@ export default function OutilComponent({
             <Edit2 className="w-4 h-4" />
           </button>
           <button
-            onClick={() => onDelete?.(outil.id)}
+            onClick={() => onDelete?.(outil._id ?? outil.id!)}
             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Supprimer"
           >
@@ -69,11 +93,12 @@ export default function OutilComponent({
         </div>
       </div>
 
+      {/* Infos principales */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">État</span>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium border capitalize ${getEtatColor(outil.etat)}`}>
-            {outil.etat}
+          <span className={`px-3 py-1 rounded-full text-xs font-medium border capitalize ${getEtatColor(etat)}`}>
+            {etat}
           </span>
         </div>
 
@@ -92,40 +117,42 @@ export default function OutilComponent({
           </div>
         </div>
 
-        {/* Barre de progression de l'utilisation */}
+        {/* Barre de progression */}
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(outil.enUse / outil.quantite) * 100}%` }}
+            style={{ width: `${utilisationPourcentage}%` }}
           />
         </div>
 
-        <div className="pt-2 border-t border-gray-100 space-y-1">
-          <div className="flex items-center justify-between text-xs text-gray-500">
+        {/* Dates de vérification */}
+        <div className="pt-2 border-t border-gray-100 space-y-1 text-xs text-gray-500">
+          <div className="flex items-center justify-between">
             <span>Dernière vérif.:</span>
-            <span>{outil.derniereVerification}</span>
+            <span>{formatDate(outil.derniereVerification)}</span>
           </div>
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between">
             <span>Prochaine vérif.:</span>
-            <span>{outil.prochaineVerification}</span>
+            <span>{formatDate(outil.prochaineVerification)}</span>
           </div>
         </div>
       </div>
 
+      {/* Bouton réserver */}
       <button
-        onClick={() => onReserver?.(outil.id)}
+        onClick={() => onReserver?.(outil._id ?? outil.id!)}
         disabled={!isReservable}
         className={`w-full mt-4 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
           isReservable
-            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            ? "bg-blue-100 text-blue-700 hover:bg-blue-200" 
+            : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
       >
-        {outil.etat === 'reparation' 
-          ? 'En réparation' 
+        {etat === "reparation" 
+          ? "En réparation" 
           : outil.disponible > 0 
-            ? 'Réserver' 
-            : 'Non disponible'
+            ? "Réserver" 
+            : "Non disponible"
         }
       </button>
     </div>

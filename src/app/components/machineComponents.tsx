@@ -82,56 +82,6 @@ export default function MachineComponent({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Non définie';
-    try {
-      return new Date(dateString).toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch {
-      return 'Date invalide';
-    }
-  };
-
-  const getMaintenanceStatus = () => {
-    if (!machine.prochaineMaintenance) {
-      return {
-        status: 'normal',
-        text: 'Non programmée',
-        color: 'text-gray-600',
-        icon: '📅'
-      };
-    }
-
-    const today = new Date();
-    const maintenanceDate = new Date(machine.prochaineMaintenance);
-    const daysUntilMaintenance = Math.ceil((maintenanceDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (daysUntilMaintenance <= 0) {
-      return {
-        status: 'urgent',
-        text: 'Maintenance requise !',
-        color: 'text-red-600 font-semibold',
-        icon: '⚠️'
-      };
-    } else if (daysUntilMaintenance <= 7) {
-      return {
-        status: 'warning',
-        text: `Dans ${daysUntilMaintenance} jour${daysUntilMaintenance > 1 ? 's' : ''}`,
-        color: 'text-orange-600 font-medium',
-        icon: '⚡'
-      };
-    } else {
-      return {
-        status: 'normal',
-        text: `Dans ${daysUntilMaintenance} jours`,
-        color: 'text-gray-600',
-        icon: '📅'
-      };
-    }
-  };
 
   const getUtilisationColor = (utilisation: number) => {
     if (!utilisation || utilisation === 0) return 'bg-gray-400';
@@ -158,17 +108,6 @@ export default function MachineComponent({
     // Logique manuelle si la méthode n'existe pas
     const status = machine.status?.toLowerCase();
     return status === 'active' || status === 'actif';
-  };
-
-  const getDaysUntilMaintenance = () => {
-    if (machine.getDaysUntilMaintenance && typeof machine.getDaysUntilMaintenance === 'function') {
-      return machine.getDaysUntilMaintenance();
-    }
-    // Calcul manuel si la méthode n'existe pas
-    if (!machine.prochaineMaintenance) return 0;
-    const today = new Date();
-    const maintenanceDate = new Date(machine.prochaineMaintenance);
-    return Math.ceil((maintenanceDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   // Gestion de la suppression avec confirmation
@@ -219,12 +158,10 @@ export default function MachineComponent({
 
   const statusConfig = getStatusConfig(machine.status);
   const actionButtonConfig = getActionButtonConfig();
-  const maintenanceStatus = getMaintenanceStatus();
   const canDelete = machine.status?.toLowerCase() !== 'active' && machine.status?.toLowerCase() !== 'actif';
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-lg transition-all duration-200 group">
-      {/* Header avec titre et actions */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3 flex-1">
           <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
@@ -241,11 +178,6 @@ export default function MachineComponent({
         </div>
         
         <div className="flex items-center space-x-1 ml-2">
-          {maintenanceStatus.status === 'urgent' && (
-            <div className="p-1 bg-red-100 rounded-full animate-pulse" title="Maintenance urgente requise !">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-            </div>
-          )}
           <button
             onClick={handleEdit}
             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -323,21 +255,6 @@ export default function MachineComponent({
           </div>
         </div>
 
-        {/* Informations de maintenance */}
-        <div className="bg-gray-50 rounded-lg p-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Dernière révision:</span>
-            <span className="font-medium text-gray-900">{formatDate(machine.derniereRevision)}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm mt-1">
-            <span className="text-gray-600">Prochaine maintenance:</span>
-            <span className={`font-medium ${maintenanceStatus.color}`}>
-              {maintenanceStatus.icon} {maintenanceStatus.text}
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Bouton d'action principal */}
       <div className="mt-6 pt-4 border-t border-gray-100">
         <button
@@ -368,26 +285,14 @@ export default function MachineComponent({
             }`}></span>
             <span>ID: {machine.id || machine._id || 'N/A'}</span>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="items-center space-x-3">
             <span title="Capacité effective">
               {getEffectiveCapacity()}/{machine.capacite || 0} u/h
-            </span>
-            <span title="Jours jusqu'à maintenance" className={
-              getDaysUntilMaintenance() <= 0 ? 'text-red-600 font-semibold' :
-              getDaysUntilMaintenance() <= 7 ? 'text-orange-600 font-medium' : ''
-            }>
-              {getDaysUntilMaintenance()}j
             </span>
           </div>
         </div>
       </div>
-
-      {/* Badge d'urgence si maintenance requise */}
-      {maintenanceStatus.status === 'urgent' && (
-        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-bounce">
-          ⚠️ URGENT
-        </div>
-      )}
+    </div>
     </div>
   );
 }

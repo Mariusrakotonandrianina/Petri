@@ -1,96 +1,23 @@
-// src/app/components/workshopComponents.tsx - Version avec intégration API
+// src/app/components/workshopComponents.tsx - Version corrigée avec hooks API
 "use client";
 import { Plus, Settings, Users, Wrench, AlertCircle, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import MachineComponents from "./machineComponents";
 import MachineFormModal from "./MachineFormModal";
-
-// Configuration API
-const API_BASE_URL = 'http://localhost:5000';
-
-// Types pour l'API
-interface ApiMachine {
-  id?: string | number;
-  _id?: string;
-  nom: string;
-  type: string;
-  capacite: number;
-  status: 'active' | 'panne' | 'maintenance';
-  utilisation: number;
-  derniereRevision: string;
-  prochaineMaintenance: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-interface ApiOutil {
-  id?: string | number;
-  _id?: string;
-  nom: string;
-  type: string;
-  disponible: boolean;
-  derniereUtilisation?: string;
-}
-
-interface ApiOuvrier {
-  id?: string | number;
-  _id?: string;
-  nom: string;
-  prenom: string;
-  specialite: string;
-  disponible: boolean;
-  heuresTravail?: number;
-}
-
-// Hook personnalisé pour les appels API
-const useApiCall = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const makeApiCall = async (url: string, options?: RequestInit) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}${url}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-        ...options,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { makeApiCall, loading, error, setError };
-};
+import { useWorkshopApi, Machine, Outil, Ouvrier } from "../../adapters/hooks/useApi";
 
 export default function WorkshopComponents() {
   const [activeTab, setActiveTab] = useState<'machines' | 'outils' | 'ouvriers'>('machines');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   
   // États pour les données
-  const [machines, setMachines] = useState<ApiMachine[]>([]);
-  const [outils, setOutils] = useState<ApiOutil[]>([]);
-  const [ouvriers, setOuvriers] = useState<ApiOuvrier[]>([]);
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [outils, setOutils] = useState<Outil[]>([]);
+  const [ouvriers, setOuvriers] = useState<Ouvrier[]>([]);
 
-  // Hook API
-  const { makeApiCall, loading, error, setError } = useApiCall();
+  // Utilisation du hook API combiné
+  const workshopApi = useWorkshopApi();
 
   // Chargement initial des données
   useEffect(() => {
@@ -101,16 +28,16 @@ export default function WorkshopComponents() {
     try {
       switch (activeTab) {
         case 'machines':
-          const machinesData = await makeApiCall('/machines');
-          setMachines(Array.isArray(machinesData) ? machinesData : machinesData.data || []);
+          const machinesData = await workshopApi.machines.getMachines();
+          setMachines(machinesData);
           break;
         case 'outils':
-          const outilsData = await makeApiCall('/outils');
-          setOutils(Array.isArray(outilsData) ? outilsData : outilsData.data || []);
+          const outilsData = await workshopApi.outils.getOutils();
+          setOutils(outilsData);
           break;
         case 'ouvriers':
-          const ouvriersData = await makeApiCall('/ouvriers');
-          setOuvriers(Array.isArray(ouvriersData) ? ouvriersData : ouvriersData.data || []);
+          const ouvriersData = await workshopApi.ouvriers.getOuvriers();
+          setOuvriers(ouvriersData);
           break;
       }
     } catch (err) {
@@ -120,34 +47,28 @@ export default function WorkshopComponents() {
 
   // Handlers pour les machines
   const handleCreateMachine = () => {
-    setSelectedItem(null);
+    setSelectedMachine(null);
     setIsModalOpen(true);
   };
 
-  const handleEditMachine = (machine: ApiMachine) => {
-    setSelectedItem(machine);
+  const handleEditMachine = (machine: Machine) => {
+    setSelectedMachine(machine);
     setIsModalOpen(true);
   };
 
   const handleSubmitMachine = async (data: any) => {
     try {
-      if (selectedItem) {
+      if (selectedMachine) {
         // Modification
-        const id = selectedItem.id || selectedItem._id;
-        await makeApiCall(`/machines/${id}`, {
-          method: 'PUT',
-          body: JSON.stringify(data),
-        });
+        const id = selectedMachine.id || selectedMachine._id;
+        await workshopApi.machines.updateMachine(id!, data);
       } else {
         // Création
-        await makeApiCall('/machines', {
-          method: 'POST',
-          body: JSON.stringify(data),
-        });
+        await workshopApi.machines.createMachine(data);
       }
       
       setIsModalOpen(false);
-      setSelectedItem(null);
+      setSelectedMachine(null);
       await loadData(); // Recharger les données
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
@@ -165,9 +86,7 @@ export default function WorkshopComponents() {
     
     if (window.confirm(confirmMessage)) {
       try {
-        await makeApiCall(`/machines/${id}`, {
-          method: 'DELETE',
-        });
+        await workshopApi.machines.deleteMachine(id);
         await loadData(); // Recharger les données
       } catch (error) {
         console.error('Erreur lors de la suppression:', error);
@@ -197,15 +116,8 @@ export default function WorkshopComponents() {
           newStatus = 'active';
       }
 
-      await makeApiCall(`/machines/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          ...machine,
-          status: newStatus,
-          utilisation: newStatus !== 'active' ? 0 : machine.utilisation
-        }),
-      });
-      
+      // Utilisation de la méthode dédiée pour changer le statut
+      await workshopApi.machines.toggleMachineStatus(id, newStatus);
       await loadData(); // Recharger les données
     } catch (error) {
       console.error('Erreur lors du changement de statut:', error);
@@ -215,18 +127,8 @@ export default function WorkshopComponents() {
 
   // Handlers pour les outils
   const handleToggleOutilDisponibilite = async (id: string | number) => {
-    const outil = outils.find(o => (o.id || o._id) == id);
-    if (!outil) return;
-
     try {
-      await makeApiCall(`/outils/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          ...outil,
-          disponible: !outil.disponible,
-          derniereUtilisation: !outil.disponible ? new Date().toISOString() : outil.derniereUtilisation
-        }),
-      });
+      await workshopApi.outils.toggleOutilDisponibilite(id);
       await loadData();
     } catch (error) {
       console.error('Erreur lors du changement de disponibilité:', error);
@@ -236,17 +138,8 @@ export default function WorkshopComponents() {
 
   // Handlers pour les ouvriers
   const handleToggleOuvrierDisponibilite = async (id: string | number) => {
-    const ouvrier = ouvriers.find(o => (o.id || o._id) == id);
-    if (!ouvrier) return;
-
     try {
-      await makeApiCall(`/ouvriers/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          ...ouvrier,
-          disponible: !ouvrier.disponible
-        }),
-      });
+      await workshopApi.ouvriers.toggleOuvrierDisponibilite(id);
       await loadData();
     } catch (error) {
       console.error('Erreur lors du changement de disponibilité:', error);
@@ -256,11 +149,11 @@ export default function WorkshopComponents() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setSelectedItem(null);
+    setSelectedMachine(null);
   };
 
   const handleClearError = () => {
-    setError(null);
+    workshopApi.clearAllErrors();
   };
 
   const handleRefresh = () => {
@@ -269,7 +162,7 @@ export default function WorkshopComponents() {
 
   // Fonctions de rendu
   const renderLoadingState = () => {
-    if (loading) {
+    if (workshopApi.isLoading) {
       return (
         <div className="col-span-full flex justify-center items-center h-64">
           <div className="text-center">
@@ -283,13 +176,14 @@ export default function WorkshopComponents() {
   };
 
   const renderErrorState = () => {
-    if (error) {
+    if (workshopApi.hasError) {
+      const errorMessage = workshopApi.machines.error || workshopApi.outils.error || workshopApi.ouvriers.error;
       return (
         <div className="col-span-full">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-red-800 mb-2">Erreur de connexion</h3>
-            <p className="text-red-600 mb-4">{error}</p>
+            <p className="text-red-600 mb-4">{errorMessage}</p>
             <div className="flex justify-center space-x-3">
               <button
                 onClick={handleClearError}
@@ -317,7 +211,7 @@ export default function WorkshopComponents() {
     const icon = type === 'machines' ? Settings : type === 'outils' ? Wrench : Users;
     const IconComponent = icon;
 
-    if (!loading && !error && currentData.length === 0) {
+    if (!workshopApi.isLoading && !workshopApi.hasError && currentData.length === 0) {
       return (
         <div className="col-span-full text-center py-12">
           <IconComponent className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -344,7 +238,7 @@ export default function WorkshopComponents() {
   };
 
   // Composant pour afficher un outil
-  const OutilCard = ({ outil }: { outil: ApiOutil }) => (
+  const OutilCard = ({ outil }: { outil: Outil }) => (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-lg transition-all duration-200">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
@@ -373,19 +267,21 @@ export default function WorkshopComponents() {
 
       <button
         onClick={() => handleToggleOutilDisponibilite(outil.id || outil._id!)}
-        className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+        disabled={workshopApi.outils.loading}
+        className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
           outil.disponible
             ? 'bg-red-100 text-red-700 hover:bg-red-200'
             : 'bg-green-100 text-green-700 hover:bg-green-200'
         }`}
       >
-        {outil.disponible ? 'Marquer indisponible' : 'Marquer disponible'}
+        {workshopApi.outils.loading ? 'Changement...' : 
+         outil.disponible ? 'Marquer indisponible' : 'Marquer disponible'}
       </button>
     </div>
   );
 
   // Composant pour afficher un ouvrier
-  const OuvrierCard = ({ ouvrier }: { ouvrier: ApiOuvrier }) => (
+  const OuvrierCard = ({ ouvrier }: { ouvrier: Ouvrier }) => (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-lg transition-all duration-200">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
@@ -416,13 +312,15 @@ export default function WorkshopComponents() {
 
       <button
         onClick={() => handleToggleOuvrierDisponibilite(ouvrier.id || ouvrier._id!)}
-        className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+        disabled={workshopApi.ouvriers.loading}
+        className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
           ouvrier.disponible
             ? 'bg-red-100 text-red-700 hover:bg-red-200'
             : 'bg-green-100 text-green-700 hover:bg-green-200'
         }`}
       >
-        {ouvrier.disponible ? 'Marquer occupé' : 'Marquer disponible'}
+        {workshopApi.ouvriers.loading ? 'Changement...' : 
+         ouvrier.disponible ? 'Marquer occupé' : 'Marquer disponible'}
       </button>
     </div>
   );
@@ -456,10 +354,10 @@ export default function WorkshopComponents() {
             </div>
             <button
               onClick={handleRefresh}
-              disabled={loading}
+              disabled={workshopApi.isLoading}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 mr-2 ${workshopApi.isLoading ? 'animate-spin' : ''}`} />
               Actualiser
             </button>
           </div>
@@ -511,7 +409,7 @@ export default function WorkshopComponents() {
           {activeTab === 'machines' && (
             <>
               {renderEmptyState('machines')}
-              {!loading && !error && machines.length > 0 && 
+              {!workshopApi.isLoading && !workshopApi.hasError && machines.length > 0 && 
                 machines.map(machine => (
                   <MachineComponents 
                     key={machine.id || machine._id} 
@@ -529,7 +427,7 @@ export default function WorkshopComponents() {
           {activeTab === 'outils' && (
             <>
               {renderEmptyState('outils')}
-              {!loading && !error && outils.length > 0 &&
+              {!workshopApi.isLoading && !workshopApi.hasError && outils.length > 0 &&
                 outils.map(outil => (
                   <OutilCard key={outil.id || outil._id} outil={outil} />
                 ))
@@ -541,7 +439,7 @@ export default function WorkshopComponents() {
           {activeTab === 'ouvriers' && (
             <>
               {renderEmptyState('ouvriers')}
-              {!loading && !error && ouvriers.length > 0 &&
+              {!workshopApi.isLoading && !workshopApi.hasError && ouvriers.length > 0 &&
                 ouvriers.map(ouvrier => (
                   <OuvrierCard key={ouvrier.id || ouvrier._id} ouvrier={ouvrier} />
                 ))
@@ -551,12 +449,12 @@ export default function WorkshopComponents() {
         </div>
 
         {/* Bouton d'ajout flottant - uniquement pour les machines */}
-        {activeTab === 'machines' && !error && (
+        {activeTab === 'machines' && !workshopApi.hasError && (
           <div className="fixed bottom-6 right-6">
             <button 
               className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleCreateMachine}
-              disabled={loading}
+              disabled={workshopApi.isLoading}
               title="Ajouter une nouvelle machine"
             >
               <Plus className="w-6 h-6" />
@@ -570,27 +468,27 @@ export default function WorkshopComponents() {
             isOpen={isModalOpen}
             onClose={handleCloseModal}
             onSubmit={handleSubmitMachine}
-            machine={selectedItem}
-            title={selectedItem ? 'Modifier la machine' : 'Ajouter une machine'}
+            machine={selectedMachine}
+            title={selectedMachine ? 'Modifier la machine' : 'Ajouter une machine'}
           />
         )}
 
         {/* Indicateur de connexion API */}
         <div className="fixed bottom-6 left-6">
           <div className={`flex items-center px-3 py-2 rounded-lg text-sm ${
-            error 
+            workshopApi.hasError 
               ? 'bg-red-100 text-red-800' 
               : 'bg-green-100 text-green-800'
           }`}>
             <div className={`w-2 h-2 rounded-full mr-2 ${
-              error ? 'bg-red-600' : 'bg-green-600'
+              workshopApi.hasError ? 'bg-red-600' : 'bg-green-600'
             }`}></div>
-            API {error ? 'Déconnectée' : 'Connectée'}
+            API {workshopApi.hasError ? 'Déconnectée' : 'Connectée'}
           </div>
         </div>
 
         {/* Statistiques rapides */}
-        {!loading && !error && (
+        {!workshopApi.isLoading && !workshopApi.hasError && (
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
               <div className="flex items-center">
