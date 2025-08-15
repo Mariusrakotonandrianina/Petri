@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Play, RefreshCw, Zap, Info, Settings } from 'lucide-react';
 
-const Page = () => {
+export default function GraphPage() {
   interface NetworkState {
     places: { id: string; nom: string; type: string; tokens: number }[];
     transitionsActivables: { id: string; nom: string; type: string }[];
@@ -512,5 +512,3 @@ const Page = () => {
     </div>
   );
 };
-
-export default Page;
