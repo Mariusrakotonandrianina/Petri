@@ -1,4 +1,3 @@
-// src/app/components/workshop/WorkshopStats.tsx
 "use client";
 import { Settings, Users, Wrench, Building2 } from "lucide-react";
 import { Machine, Outil, Ouvrier, Atelier } from "../../../adapters/hooks/useApi";
@@ -17,22 +16,18 @@ interface WorkshopStatsProps {
 export default function WorkshopStats({ workshopData, isLoading, hasError }: WorkshopStatsProps) {
   if (isLoading || hasError) return null;
 
-  // Fonctions utilitaires pour les statistiques des ouvriers
+  // CORRECTION: Fonctions utilitaires pour les statistiques des ouvriers avec les bons statuts
   const getOuvriersStats = () => {
     const total = workshopData.ouvriers.length;
     const disponibles = workshopData.ouvriers.filter(o => o.statut === 'disponible').length;
-    //const occupes = workshopData.ouvriers.filter(o => o.statut === 'occupé' || o.statut === 'occupe').length;
-    const pauses = workshopData.ouvriers.filter(o => o.statut === 'pause').length;
-    
-    // Calcul des absents (ouvriers qui ne sont dans aucun des statuts principaux)
-    //const absents = total - (disponibles + occupes + pauses);
+    const occupes = workshopData.ouvriers.filter(o => o.statut === 'occupé').length;
+    const absents = workshopData.ouvriers.filter(o => o.statut === 'absent').length;   
     
     return {
       total,
       disponibles,
-      //occupes,
-      pauses,
-      //absents: Math.max(0, absents), // S'assurer que le nombre d'absents n'est pas négatif
+      occupes,
+      absents,
       tauxDisponibilite: total > 0 ? Math.round((disponibles / total) * 100) : 0,
     };
   };
@@ -69,7 +64,7 @@ export default function WorkshopStats({ workshopData, isLoading, hasError }: Wor
         </div>
       </div>
       
-      {/* Statistiques Main d'œuvre */}
+      {/* Statistiques Main d'œuvre - CORRIGÉ */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center">
           <Users className="w-8 h-8 text-purple-600 mr-3" />
@@ -82,12 +77,12 @@ export default function WorkshopStats({ workshopData, isLoading, hasError }: Wor
                   <span className="text-green-600 font-medium">
                     {ouvriersStats.disponibles} libres
                   </span>
-                  {/*<span className="text-yellow-600 font-medium">
+                  <span className="text-yellow-600 font-medium">
                     {ouvriersStats.occupes} occupés
-                  </span>*/}
-                  {ouvriersStats.pauses > 0 && (
-                    <span className="text-blue-600 font-medium">
-                      {ouvriersStats.pauses} pause
+                  </span>
+                  {ouvriersStats.absents > 0 && (
+                    <span className="text-red-600 font-medium">
+                      {ouvriersStats.absents} absents
                     </span>
                   )}
                 </div>

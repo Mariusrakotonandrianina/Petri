@@ -224,39 +224,43 @@ export const useOuvriersApi = () => {
   const { makeApiCall, loading, error, clearError } = useApiCall();
 
   const getOuvriers = useCallback(async (): Promise<Ouvrier[]> => {
-    const response = await makeApiCall<Ouvrier[]>('/ouvriers');
-    return Array.isArray(response) ? response : (response as any).data || [];
+    const response = await makeApiCall<ApiResponse<Ouvrier[]>>('/ouvriers');
+    return Array.isArray(response)
+      ? (response as Ouvrier[])
+      : response.data || [];
   }, [makeApiCall]);
 
   const getOuvrier = useCallback(async (id: string | number): Promise<Ouvrier> => {
-    return await makeApiCall<Ouvrier>(`/ouvriers/${id}`);
+    const response = await makeApiCall<ApiResponse<Ouvrier>>(`/ouvriers/${id}`);
+    return (response as ApiResponse<Ouvrier>).data || (response as Ouvrier);
   }, [makeApiCall]);
 
   const createOuvrier = useCallback(async (ouvrierData: Partial<Ouvrier>): Promise<Ouvrier> => {
-    return await makeApiCall<Ouvrier>('/ouvriers', {
+    const response = await makeApiCall<ApiResponse<Ouvrier>>('/ouvriers', {
       method: 'POST',
       body: JSON.stringify(ouvrierData),
     });
+    return (response as ApiResponse<Ouvrier>).data || (response as Ouvrier);
   }, [makeApiCall]);
 
   const updateOuvrier = useCallback(async (id: string | number, ouvrierData: Partial<Ouvrier>): Promise<Ouvrier> => {
-    return await makeApiCall<Ouvrier>(`/ouvriers/${id}`, {
+    const response = await makeApiCall<ApiResponse<Ouvrier>>(`/ouvriers/${id}`, {
       method: 'PUT',
       body: JSON.stringify(ouvrierData),
     });
+    return (response as ApiResponse<Ouvrier>).data || (response as Ouvrier);
   }, [makeApiCall]);
 
   const deleteOuvrier = useCallback(async (id: string | number): Promise<void> => {
-    return await makeApiCall<void>(`/ouvriers/${id}`, {
-      method: 'DELETE',
-    });
+    await makeApiCall<void>(`/ouvriers/${id}`, { method: 'DELETE' });
   }, [makeApiCall]);
 
   const updateOuvrierStatut = useCallback(async (id: string | number, newStatut: StatutOuvrier): Promise<Ouvrier> => {
-    return await makeApiCall<Ouvrier>(`/ouvriers/${id}/statut`, {
+    const response = await makeApiCall<ApiResponse<Ouvrier>>(`/ouvriers/${id}/statut`, {
       method: 'PATCH',
       body: JSON.stringify({ statut: newStatut }),
     });
+    return (response as ApiResponse<Ouvrier>).data || (response as Ouvrier);
   }, [makeApiCall]);
 
   return {

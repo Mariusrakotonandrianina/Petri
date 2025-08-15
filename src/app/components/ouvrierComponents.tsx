@@ -1,8 +1,8 @@
 // src/app/components/ouvrierComponents.tsx - Composant ouvrier avec logique cohérente
 "use client";
-import { Users, Edit, Trash2, Clock, Award, User, CheckCircle, XCircle, AlertTriangle, Coffee } from "lucide-react";
+import { Users, Edit, Trash2, Clock, Award, User, CheckCircle, XCircle, AlertTriangle, Coffee, UserCheck, UserX, UserMinus } from "lucide-react";
 
-// Types unifiés
+// Types unifiés - CORRECTION: Alignement avec le backend
 type NiveauOuvrier = 'Débutant' | 'Intermédiaire' | 'Expert';
 type StatutOuvrier = 'disponible' | 'occupé' | 'absent';
 
@@ -26,16 +26,18 @@ interface OuvrierComponentProps {
   onEdit: (ouvrier: any) => void;
   onDelete: (id: string | number) => void;
   onToggleStatus: (id: string | number) => void;
+  onChangeStatus?: (id: string | number, newStatus: StatutOuvrier) => void; // NOUVELLE PROP
 }
 
 export default function OuvrierComponent({ 
   ouvrier, 
   onEdit, 
   onDelete, 
-  onToggleStatus 
+  onToggleStatus,
+  onChangeStatus // NOUVELLE PROP
 }: OuvrierComponentProps) {
   
-  // Normalisation du statut (logique cohérente)
+  // CORRECTION: Normalisation du statut cohérente avec le backend
   const getStatutNormalise = (): StatutOuvrier => {
     if (ouvrier.statut) {
       return ouvrier.statut;
@@ -55,44 +57,48 @@ export default function OuvrierComponent({
     ? Math.round((ouvrier.heuresJour / ouvrier.heuresMax) * 100) 
     : 0;
 
-  // Configuration des couleurs et icônes selon le statut
+  // CORRECTION: Configuration des couleurs et icônes selon le statut
   const getStatusConfig = () => {
     switch (statut) {
       case 'disponible':
         return {
-          color: 'bg-green-100 text-green-800',
+          color: 'bg-green-100 text-green-800 border border-green-200',
           text: '🟢 Disponible',
           icon: CheckCircle,
-          buttonColor: 'bg-red-100 text-red-700 hover:bg-red-200',
+          buttonColor: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
           buttonText: 'Marquer occupé',
-          buttonIcon: XCircle
+          buttonIcon: Clock,
+          toggleAction: () => onToggleStatus(ouvrier._id)
         };
       case 'occupé':
         return {
-          color: 'bg-yellow-100 text-yellow-800',
+          color: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
           text: '🟡 Occupé',
           icon: Clock,
           buttonColor: 'bg-green-100 text-green-700 hover:bg-green-200',
           buttonText: 'Libérer',
-          buttonIcon: CheckCircle
+          buttonIcon: CheckCircle,
+          toggleAction: () => onToggleStatus(ouvrier._id)
         };
       case 'absent':
         return {
-          color: 'bg-gray-100 text-gray-800',
+          color: 'bg-gray-100 text-gray-800 border border-gray-200',
           text: '🔴 Absent',
           icon: Coffee,
           buttonColor: 'bg-green-100 text-green-700 hover:bg-green-200',
           buttonText: 'Marquer disponible',
-          buttonIcon: CheckCircle
+          buttonIcon: CheckCircle,
+          toggleAction: () => onToggleStatus(ouvrier._id)
         };
       default:
         return {
-          color: 'bg-gray-100 text-gray-800',
+          color: 'bg-gray-100 text-gray-800 border border-gray-200',
           text: '❓ Inconnu',
           icon: AlertTriangle,
           buttonColor: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
           buttonText: 'Actualiser',
-          buttonIcon: CheckCircle
+          buttonIcon: CheckCircle,
+          toggleAction: () => onToggleStatus(ouvrier._id)
         };
     }
   };
@@ -102,16 +108,17 @@ export default function OuvrierComponent({
   // Couleur du badge de niveau
   const getNiveauColor = () => {
     switch (ouvrier.niveau) {
-      case 'Expert': return 'bg-purple-100 text-purple-800';
-      case 'Intermédiaire': return 'bg-blue-100 text-blue-800';
-      case 'Débutant': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Expert': return 'bg-purple-100 text-purple-800 border border-purple-200';
+      case 'Intermédiaire': return 'bg-blue-100 text-blue-800 border border-blue-200';
+      case 'Débutant': return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+      default: return 'bg-gray-100 text-gray-800 border border-gray-200';
     }
   };
 
   // Couleur de la barre de progression
   const getProgressColor = () => {
-    if (progressPercentage >= 90) return 'bg-red-500';
+    if (progressPercentage >= 100) return 'bg-red-500';
+    if (progressPercentage >= 90) return 'bg-orange-500';
     if (progressPercentage >= 75) return 'bg-yellow-500';
     return 'bg-green-500';
   };
@@ -139,6 +146,16 @@ export default function OuvrierComponent({
   const nomComplet = ouvrier.prenom 
     ? `${ouvrier.prenom} ${ouvrier.nom}` 
     : ouvrier.nom;
+
+  // NOUVELLE FONCTION: Gestionnaire pour les boutons de changement de statut spécifiques
+  const handleChangeStatutSpecifique = (nouveauStatut: StatutOuvrier) => {
+    if (onChangeStatus) {
+      onChangeStatus(ouvrier._id, nouveauStatut);
+    } else {
+      // Fallback vers la fonction toggle si onChangeStatus n'est pas disponible
+      onToggleStatus(ouvrier._id);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-lg transition-all duration-200">
@@ -242,13 +259,13 @@ export default function OuvrierComponent({
             {ouvrier.competences.slice(0, 4).map((competence, index) => (
               <span 
                 key={index}
-                className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md text-xs font-medium"
+                className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md text-xs font-medium border border-indigo-200"
               >
                 {competence}
               </span>
             ))}
             {ouvrier.competences.length > 4 && (
-              <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-xs">
+              <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-xs border border-gray-200">
                 +{ouvrier.competences.length - 4} autres
               </span>
             )}
@@ -256,31 +273,81 @@ export default function OuvrierComponent({
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex space-x-2 mb-4">
-        <button
-          onClick={() => onEdit(ouvrier)}
-          className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors flex items-center justify-center"
-        >
-          <Edit className="w-4 h-4 mr-1" />
-          Modifier
-        </button>
-        
-        <button
-          onClick={() => onToggleStatus(ouvrier._id)}
-          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center ${statusConfig.buttonColor}`}
-        >
-          <statusConfig.buttonIcon className="w-4 h-4 mr-1" />
-          {statusConfig.buttonText}
-        </button>
-        
-        <button
-          onClick={() => onDelete(ouvrier._id)}
-          className="px-3 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center justify-center"
-          title={`Supprimer ${nomComplet}`}
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+      {/* CORRECTION: Actions améliorées avec boutons de statut spécifiques */}
+      <div className="space-y-3 mb-4">
+        {/* Actions principales */}
+        <div className="flex space-x-2">
+          <button
+            onClick={() => onEdit(ouvrier)}
+            className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors flex items-center justify-center border border-blue-200"
+          >
+            <Edit className="w-4 h-4 mr-1" />
+            Modifier
+          </button>
+          
+          <button
+            onClick={statusConfig.toggleAction}
+            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center border ${statusConfig.buttonColor}`}
+          >
+            <statusConfig.buttonIcon className="w-4 h-4 mr-1" />
+            {statusConfig.buttonText}
+          </button>
+          
+          <button
+            onClick={() => onDelete(ouvrier._id)}
+            className="px-3 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center justify-center border border-red-200"
+            title={`Supprimer ${nomComplet}`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* NOUVEAU: Boutons de statut spécifiques (si onChangeStatus est disponible) */}
+        {onChangeStatus && (
+          <div className="flex space-x-2">
+            <button
+              onClick={() => handleChangeStatutSpecifique('disponible')}
+              disabled={statut === 'disponible'}
+              className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center justify-center border ${
+                statut === 'disponible' 
+                  ? 'bg-green-200 text-green-800 border-green-300 cursor-not-allowed opacity-75' 
+                  : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+              }`}
+              title="Marquer comme disponible"
+            >
+              <UserCheck className="w-3 h-3 mr-1" />
+              Disponible
+            </button>
+            
+            <button
+              onClick={() => handleChangeStatutSpecifique('occupé')}
+              disabled={statut === 'occupé'}
+              className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center justify-center border ${
+                statut === 'occupé' 
+                  ? 'bg-yellow-200 text-yellow-800 border-yellow-300 cursor-not-allowed opacity-75' 
+                  : 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100'
+              }`}
+              title="Marquer comme occupé"
+            >
+              <Clock className="w-3 h-3 mr-1" />
+              Occupé
+            </button>
+            
+            <button
+              onClick={() => handleChangeStatutSpecifique('absent')}
+              disabled={statut === 'absent'}
+              className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center justify-center border ${
+                statut === 'absent' 
+                  ? 'bg-gray-200 text-gray-800 border-gray-300 cursor-not-allowed opacity-75' 
+                  : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+              }`}
+              title="Marquer comme absent"
+            >
+              <UserMinus className="w-3 h-3 mr-1" />
+              Absent
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Footer avec informations supplémentaires */}
@@ -361,15 +428,15 @@ export default function OuvrierComponent({
             )}
             
             {statut === 'disponible' && (
-              <span className="text-green-600 font-medium">Libre</span>
+              <span className="text-green-600 font-medium">● Libre</span>
             )}
             
             {statut === 'occupé' && ouvrier.tacheActuelle && (
-              <span className="text-yellow-600 font-medium">En activité</span>
+              <span className="text-yellow-600 font-medium">● En activité</span>
             )}
             
             {statut === 'absent' && (
-              <span className="text-gray-600 font-medium">Indisponible</span>
+              <span className="text-gray-600 font-medium">● Indisponible</span>
             )}
           </div>
         </div>
