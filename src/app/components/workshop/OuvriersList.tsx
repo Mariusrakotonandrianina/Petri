@@ -1,6 +1,6 @@
 "use client";
 import OuvrierComponent from "../ouvrierComponents";
-import { Ouvrier, StatutOuvrier } from "../../../adapters/hooks/useApi";
+import { Ouvrier, StatutOuvrier, NiveauOuvrier } from "../../../adapters/hooks/useApi";
 
 interface OuvriersListProps {
   ouvriers: Ouvrier[];
@@ -24,58 +24,40 @@ export default function OuvriersList({
   
   if (isLoading || hasError || ouvriers.length === 0) return null;
 
-  // CORRECTION: Conversion avec types compatibles pour OuvrierComponent
+  // CORRECTION: Conversion avec types compatibles
   const convertOuvrierForDisplay = (ouvrier: Ouvrier) => {
-    // Normalisation du niveau selon les types attendus par OuvrierComponent
-    const niveauNormalise = (): 'Débutant' | 'Intermédiaire' | 'Expert' => {
+    const niveauPourAffichage = (): 'Débutant' | 'Confirmé' | 'Expert' => {
       switch (ouvrier.niveau) {
         case 'Expert': return 'Expert';
-        case 'Confirmé': return 'Intermédiaire'; // Confirmé -> Intermédiaire
+        case 'Confirmé': return 'Confirmé';
         case 'Débutant': return 'Débutant';
         default: return 'Débutant';
       }
-    };
-
-    // CORRECTION: Pas de normalisation nécessaire pour le statut - utiliser directement
-    const statutNormalise = (): 'disponible' | 'occupé' | 'absent' => {
-      // Le backend utilise déjà les bons types : 'disponible' | 'occupé' | 'absent'
-      return ouvrier.statut || 'disponible';
     };
 
     return {
       _id: String(ouvrier.id || ouvrier._id),
       nom: ouvrier.nom,
       specialite: ouvrier.specialite,
-      niveau: niveauNormalise(),
-      statut: statutNormalise(), // Utilisation directe du statut de l'API
+      niveau: niveauPourAffichage(),
+      statut: ouvrier.statut || 'disponible',
       tacheActuelle: ouvrier.tacheActuelle || undefined,
       heuresJour: ouvrier.heuresJour || 0,
       heuresMax: ouvrier.heuresMax || 8,
       competences: ouvrier.competences || [],
-      disponible: ouvrier.statut === 'disponible', // Propriété de compatibilité
       createdAt: ouvrier.createdAt,
       updatedAt: ouvrier.updatedAt
     };
   };
 
   const handleEditOuvrier = (ouvrierDisplay: any) => {
-    // Conversion inverse pour l'API avec gestion des niveaux
-    const niveauPourApi = (): 'Expert' | 'Confirmé' | 'Débutant' => {
-      switch (ouvrierDisplay.niveau) {
-        case 'Expert': return 'Expert';
-        case 'Intermédiaire': return 'Confirmé'; // Intermédiaire -> Confirmé pour l'API
-        case 'Débutant': return 'Débutant';
-        default: 'Débutant';
-      }
-    };
-
     const ouvrierForApi: Ouvrier = {
       id: ouvrierDisplay._id,
       _id: ouvrierDisplay._id,
       nom: ouvrierDisplay.nom,
       specialite: ouvrierDisplay.specialite,
-      niveau: niveauPourApi(),
-      statut: ouvrierDisplay.statut || 'disponible',
+      niveau: ouvrierDisplay.niveau as NiveauOuvrier,
+      statut: ouvrierDisplay.statut as StatutOuvrier,
       tacheActuelle: ouvrierDisplay.tacheActuelle || null,
       heuresJour: Number(ouvrierDisplay.heuresJour) || 0,
       heuresMax: Number(ouvrierDisplay.heuresMax) || 8,
@@ -104,62 +86,32 @@ export default function OuvriersList({
     }
   };
 
-  // CORRECTION MAJEURE: Utilisation directe de l'API updateOuvrierStatut
+  // CORRECTION MAJEURE: Utilisation de toggleOuvrierStatut pour le basculement automatique
   const handleToggleOuvrierDisponibilite = async (id: string | number) => {
     const ouvrier = ouvriers.find(o => (o.id || o._id) == id);
     if (!ouvrier) return;
     
     try {
-      // CORRECTION: Cycle d'états cohérent avec le backend
-      let newStatut: StatutOuvrier;
+      console.log(`Toggle statut pour ${ouvrier.nom}: ${ouvrier.statut}`);
       
-      switch (ouvrier.statut) {
-        case 'disponible':
-          newStatut = 'occupé';
-          break;
-        case 'occupé':
-          newStatut = 'disponible';
-          break;
-        case 'absent':
-          newStatut = 'disponible';
-          break;
-        default:
-          newStatut = 'disponible';
-      }
-
-      console.log(`Changement de statut pour ${ouvrier.nom}: ${ouvrier.statut} -> ${newStatut}`);
-      
-      // CORRECTION: Utilisation directe de updateOuvrierStatut avec le bon type
-      await workshopApi.ouvriers.updateOuvrierStatut(id, newStatut);
+      // CORRECTION: Utilisation de la nouvelle fonction toggleOuvrierStatut
+      await workshopApi.ouvriers.toggleOuvrierStatut(id);
       await onLoadData();
       
-      // Message de confirmation optionnel
-      console.log(`Statut de ${ouvrier.nom} changé avec succès: ${newStatut}`);
+      console.log(`Statut de ${ouvrier.nom} changé avec succès`);
       
     } catch (error) {
       console.error("Erreur lors du changement de statut:", error);
-      
-      // Gestion d'erreur améliorée
-      let errorMessage = 'Impossible de changer le statut';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null && 'message' in error) {
-        errorMessage = (error as any).message;
-      }
-      
-      alert(`Erreur: ${errorMessage}`);
-      
-      // Optionnel: recharger les données pour s'assurer de la cohérence
+      alert(`Erreur: ${error instanceof Error ? error.message : 'Impossible de changer le statut'}`);
       await onLoadData();
     }
   };
 
-  // CORRECTION: Fonction pour changer le statut vers un état spécifique
+  // CORRECTION: Fonction pour changer vers un statut spécifique
   const handleChangeStatutSpecifique = async (id: string | number, nouveauStatut: StatutOuvrier) => {
     const ouvrier = ouvriers.find(o => (o.id || o._id) == id);
     if (!ouvrier) return;
     
-    // Éviter les changements inutiles
     if (ouvrier.statut === nouveauStatut) {
       console.log(`L'ouvrier ${ouvrier.nom} a déjà le statut: ${nouveauStatut}`);
       return;
@@ -168,6 +120,7 @@ export default function OuvriersList({
     try {
       console.log(`Changement de statut pour ${ouvrier.nom}: ${ouvrier.statut} -> ${nouveauStatut}`);
       
+      // CORRECTION: Utilisation de updateOuvrierStatut pour changement spécifique
       await workshopApi.ouvriers.updateOuvrierStatut(id, nouveauStatut);
       await onLoadData();
       
@@ -176,7 +129,7 @@ export default function OuvriersList({
     } catch (error) {
       console.error("Erreur lors du changement de statut:", error);
       alert(`Erreur: ${error instanceof Error ? error.message : 'Impossible de changer le statut'}`);
-      await onLoadData(); // Recharger pour maintenir la cohérence
+      await onLoadData();
     }
   };
 
@@ -188,8 +141,8 @@ export default function OuvriersList({
           ouvrier={convertOuvrierForDisplay(ouvrier)}
           onEdit={handleEditOuvrier}
           onDelete={handleDeleteOuvrier}
-          onToggleStatus={handleToggleOuvrierDisponibilite} // Fonction de basculement
-          onChangeStatus={handleChangeStatutSpecifique} // Nouvelle fonction pour changement spécifique
+          onToggleStatus={handleToggleOuvrierDisponibilite}  // Toggle automatique
+          onChangeStatus={handleChangeStatutSpecifique}      // Changement spécifique
         />
       ))}
     </>

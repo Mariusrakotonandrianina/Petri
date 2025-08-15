@@ -263,6 +263,27 @@ export const useOuvriersApi = () => {
     return (response as ApiResponse<Ouvrier>).data || (response as Ouvrier);
   }, [makeApiCall]);
 
+  const toggleOuvrierStatut = useCallback(async (id: string | number): Promise<Ouvrier> => {
+    const currentOuvrier = await getOuvrier(id);
+
+    let newStatut: StatutOuvrier;
+    switch (currentOuvrier.statut) {
+      case 'disponible':
+        newStatut = 'occupe';
+        break;
+      case 'occupe':
+        newStatut = 'disponible';
+        break;
+      case 'absent':
+        newStatut = 'disponible';
+        break;
+      default:
+        newStatut = 'disponible';
+    }
+    
+    return await updateOuvrierStatut(id, newStatut);
+  }, [makeApiCall, getOuvrier, updateOuvrierStatut]);
+
   return {
     getOuvriers,
     getOuvrier,
@@ -270,13 +291,13 @@ export const useOuvriersApi = () => {
     updateOuvrier,
     deleteOuvrier,
     updateOuvrierStatut,
+    toggleOuvrierStatut,
     loading,
     error,
     clearError,
   };
 };
 
-// CORRECTION PRINCIPALE ICI ⬇️
 export const useWorkshopApi = () => {
   const machinesApi = useMachinesApi();
   const outilsApi = useOutilsApi();
@@ -365,7 +386,7 @@ export interface Outil {
 }
 
 export type NiveauOuvrier = 'Expert' | 'Confirmé' | 'Débutant';
-export type StatutOuvrier = 'disponible' | 'occupé' | 'absent'; // Correction: 'occupe' -> 'occupé'
+export type StatutOuvrier = 'disponible' | 'occupe' | 'absent';
 
 export interface Ouvrier {
   id?: string | number;

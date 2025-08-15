@@ -34,8 +34,8 @@ export const validateStatusChange = (
 export const getNextStatusInCycle = (currentStatus: StatutOuvrier): StatutOuvrier => {
   switch (currentStatus) {
     case 'disponible':
-      return 'occupé';
-    case 'occupé':
+      return 'occupe';
+    case 'occupe':
       return 'disponible'; // Libérer l'ouvrier
     case 'absent':
       return 'disponible'; // Marquer comme disponible
@@ -85,7 +85,7 @@ export const getStatusDisplayConfig = (status: StatutOuvrier) => {
  * Obtient les actions possibles pour un statut donné
  */
 export const getAvailableActions = (currentStatus: StatutOuvrier) => {
-  const allStatuses: StatutOuvrier[] = ['disponible', 'occupé', 'absent'];
+  const allStatuses: StatutOuvrier[] = ['disponible', 'occupe', 'absent'];
   
   return allStatuses
     .filter(status => status !== currentStatus)
@@ -222,7 +222,7 @@ export const shouldShowAlert = (
   }
 
   // Alerte pour ouvrier occupé sans tâche
-  if (status === 'occupé' && !tacheActuelle?.trim()) {
+  if (status === 'occupe' && !tacheActuelle?.trim()) {
     alerts.push({
       type: 'warning',
       message: 'Aucune tâche spécifiée'
@@ -314,7 +314,7 @@ export const getManagementSuggestions = <T extends { statut?: StatutOuvrier; nom
   const suggestions: Array<{ type: 'info' | 'warning' | 'suggestion'; message: string }> = [];
 
   const disponibles = ouvriers.filter(o => (o.statut || 'disponible') === 'disponible');
-  const occupes = ouvriers.filter(o => (o.statut || 'disponible') === 'occupé');
+  const occupes = ouvriers.filter(o => (o.statut || 'disponible') === 'occupe');
   const absents = ouvriers.filter(o => (o.statut || 'disponible') === 'absent');
 
   // Statistiques de base
