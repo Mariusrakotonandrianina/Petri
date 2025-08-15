@@ -1,4 +1,4 @@
-// src/app/components/workshopComponents.tsx - Version avec structure modulaire cohérente
+// src/app/components/workshopComponents.tsx - Version corrigée avec logique ouvriers cohérente
 "use client";
 import { Plus, Settings, Users, Wrench, Building2, AlertCircle, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -6,7 +6,7 @@ import MachineComponents from "./machineComponents";
 import MachineFormModal from "./MachineFormModal";
 import AtelierComponent from "./AtelierComponents";
 import AtelierFormModal from "./AtelierFormModal";
-import OuvrierComponent from "./ouvrierComponents"; // Import du composant modulaire
+import OuvrierComponent from "./ouvrierComponents";
 import OuvrierFormModal from "./OuvrierFormModal";
 import { useWorkshopApi, Machine, Outil, Ouvrier, Atelier } from "../../adapters/hooks/useApi";
 
@@ -18,6 +18,7 @@ export default function WorkshopComponents() {
   const [selectedOuvrier, setSelectedOuvrier] = useState<Ouvrier | null>(null);
   const [isAtelierModalOpen, setIsAtelierModalOpen] = useState(false);
   const [isOuvrierModalOpen, setIsOuvrierModalOpen] = useState(false);
+
   
   // États pour les données
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -58,7 +59,7 @@ export default function WorkshopComponents() {
     }
   };
 
-  // Handlers pour les machines
+  // Handlers pour les machines (inchangés)
   const handleCreateMachine = () => {
     setSelectedMachine(null);
     setIsModalOpen(true);
@@ -135,7 +136,7 @@ export default function WorkshopComponents() {
     }
   };
 
-  // Handlers pour les outils
+  // Handlers pour les outils (inchangés)
   const handleToggleOutilDisponibilite = async (id: string | number) => {
     try {
       await workshopApi.outils.toggleOutilDisponibilite(id);
@@ -146,35 +147,34 @@ export default function WorkshopComponents() {
     }
   };
 
-  // Handlers pour les ouvriers - Simplifiés avec le composant modulaire
+  // Handlers pour les ouvriers - CORRIGÉS avec logique cohérente
   const handleCreateOuvrier = () => {
     setSelectedOuvrier(null);
     setIsOuvrierModalOpen(true);
   };
 
-  const handleEditOuvrier = (ouvrier: any) => {
-    // Convertir les données du composant vers le format de l'API
+  const handleEditOuvrier = (ouvrierDisplay: any) => {
+    // Conversion des données d'affichage vers le format API
     const ouvrierForApi: Ouvrier = {
-      id: ouvrier._id,
-      _id: ouvrier._id,
-      nom: ouvrier.nom,
-      specialite: ouvrier.specialite,
-      niveau: ouvrier.niveau,
-      competences: ouvrier.competences,
-      disponible: ouvrier.disponible,
-      status: ouvrier.status,
-      tacheActuelle: ouvrier.tacheActuelle,
-      heuresJour: ouvrier.heuresJour,
-      heuresMax: ouvrier.heuresMax,
-      createdAt: ouvrier.createdAt,
-      updatedAt: ouvrier.updatedAt,
-      prenom: ""
+      id: ouvrierDisplay._id,
+      _id: ouvrierDisplay._id,
+      nom: ouvrierDisplay.nom,
+      specialite: ouvrierDisplay.specialite,
+      niveau: ouvrierDisplay.niveau || 'Débutant',
+      statut: ouvrierDisplay.statut || (ouvrierDisplay.disponible ? 'disponible' : 'occupé'),
+      tacheActuelle: ouvrierDisplay.tacheActuelle || '',
+      heuresJour: Number(ouvrierDisplay.heuresJour) || 0,
+      heuresMax: Number(ouvrierDisplay.heuresMax) || 8,
+      competences: Array.isArray(ouvrierDisplay.competences) ? ouvrierDisplay.competences : [],
+      createdAt: ouvrierDisplay.createdAt,
+      updatedAt: ouvrierDisplay.updatedAt
     };
+    
     setSelectedOuvrier(ouvrierForApi);
     setIsOuvrierModalOpen(true);
   };
 
-  const handleSubmitOuvrier = async (data: any) => {
+  const handleSubmitOuvrier = async (data: Partial<Ouvrier>) => {
     try {
       if (selectedOuvrier) {
         const id = selectedOuvrier.id || selectedOuvrier._id;
@@ -195,9 +195,7 @@ export default function WorkshopComponents() {
   const handleDeleteOuvrier = async (id: string | number) => {
     const ouvrier = ouvriers.find(o => (o.id || o._id) == id);
     if (!ouvrier) return;
-
-    const confirmMessage = `Êtes-vous sûr de vouloir supprimer l'ouvrier "${ouvrier.prenom} ${ouvrier.nom}" ?`;
-    
+    const confirmMessage = `Êtes-vous sûr de vouloir supprimer l'ouvrier "${ouvrier.nom}" ?`;
     if (window.confirm(confirmMessage)) {
       try {
         await workshopApi.ouvriers.deleteOuvrier(id);
@@ -210,23 +208,25 @@ export default function WorkshopComponents() {
   };
 
   const handleToggleOuvrierDisponibilite = async (id: string | number) => {
+    const ouvrier = ouvriers.find(o => (o.id || o._id) == id);
+    if (!ouvrier) return;
     try {
-      await workshopApi.ouvriers.toggleOuvrierDisponibilite(id);
+      const newStatut = ouvrier.statut === 'disponible' ? 'occupé' : 'disponible';
+      await workshopApi.ouvriers.updateOuvrierStatut(id, newStatut);
       await loadData();
     } catch (error) {
-      console.error('Erreur lors du changement de disponibilité:', error);
-      alert(`Erreur: ${error instanceof Error ? error.message : 'Impossible de changer la disponibilité'}`);
+      console.error("Erreur lors du changement de statut:", error);
+      alert(`Erreur: ${error instanceof Error ? error.message : 'Impossible de changer le statut'}`);
     }
   };
 
-  // Handlers pour les ateliers
+  // Handlers pour les ateliers (inchangés)
   const handleCreateAtelier = () => {
     setSelectedAtelier(null);
     setIsAtelierModalOpen(true);
   };
 
   const handleEditAtelier = (atelier: any) => {
-    // Convertir les données du composant vers le format de l'API
     const atelierForApi: Atelier = {
       id: atelier._id,
       _id: atelier._id,
@@ -280,7 +280,6 @@ export default function WorkshopComponents() {
           newStatus = 'actif';
       }
 
-      // Pour l'instant, on utilise updateAtelier car il n'y a pas de méthode dédiée pour le statut
       await workshopApi.ateliers.updateAtelier(id, { ...atelier, status: newStatus });
       await loadData();
     } catch (error) {
@@ -307,6 +306,7 @@ export default function WorkshopComponents() {
     }
   };
 
+  // Handlers de fermeture de modals
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedMachine(null);
@@ -330,7 +330,22 @@ export default function WorkshopComponents() {
     loadData();
   };
 
-  // Fonctions de rendu
+  const convertOuvrierForDisplay = (ouvrier: Ouvrier) => ({
+    _id: String(ouvrier.id || ouvrier._id),
+    nom: ouvrier.nom,
+    specialite: ouvrier.specialite,
+    niveau: ouvrier.niveau,
+    statut: ouvrier.statut,
+    tacheActuelle: ouvrier.tacheActuelle,
+    heuresJour: ouvrier.heuresJour,
+    heuresMax: ouvrier.heuresMax,
+    competences: ouvrier.competences,
+    disponible: ouvrier.statut === 'disponible',
+    createdAt: ouvrier.createdAt,
+    updatedAt: ouvrier.updatedAt
+  });
+
+  // Fonctions de rendu (inchangées)
   const renderLoadingState = () => {
     if (workshopApi.isLoading) {
       return (
@@ -399,7 +414,7 @@ export default function WorkshopComponents() {
               : type === 'ateliers'
               ? "Commencez par ajouter votre premier atelier."
               : type === 'ouvriers'
-              ? "Commencez par ajouter votre premier ouvrier."
+              ? "Commencez par ajouter votre premier ouvrier à l'équipe."
               : `La gestion des ${type} sera disponible prochainement.`
             }
           </p>
@@ -418,7 +433,7 @@ export default function WorkshopComponents() {
     return null;
   };
 
-  // Composant pour afficher un outil - Maintenu pour cohérence
+  // Composant pour afficher un outil
   const OutilCard = ({ outil }: { outil: Outil }) => (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-lg transition-all duration-200">
       <div className="flex items-start justify-between mb-4">
@@ -475,7 +490,6 @@ export default function WorkshopComponents() {
         return tab;
     }
   };
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -584,7 +598,7 @@ export default function WorkshopComponents() {
             </>
           )}
 
-          {/* Contenu des ouvriers - Utilisation du composant modulaire */}
+          {/* Contenu des ouvriers - CORRIGÉ avec conversion appropriée */}
           {activeTab === 'ouvriers' && (
             <>
               {renderEmptyState('ouvriers')}
@@ -592,17 +606,7 @@ export default function WorkshopComponents() {
                 ouvriers.map(ouvrier => (
                   <OuvrierComponent
                     key={ouvrier.id || ouvrier._id}
-                    ouvrier={{
-                      _id: String(ouvrier.id || ouvrier._id),
-                      nom: ouvrier.nom,
-                      specialite: ouvrier.specialite,
-                      statut: ouvrier.status,
-                      tacheActuelle: ouvrier.tacheActuelle,
-                      heuresJour: ouvrier.heuresJour,
-                      heuresMax: ouvrier.heuresMax,
-                      createdAt: ouvrier.createdAt,
-                      updatedAt: ouvrier.updatedAt
-                    }}
+                    ouvrier={convertOuvrierForDisplay(ouvrier)}
                     onEdit={handleEditOuvrier}
                     onDelete={handleDeleteOuvrier}
                     onToggleStatus={handleToggleOuvrierDisponibilite}
@@ -641,7 +645,7 @@ export default function WorkshopComponents() {
         
         </div>
 
-        {/* Bouton d'ajout flottant - pour les machines, ateliers et ouvriers */}
+        {/* Bouton d'ajout flottant */}
         {(activeTab === 'machines' || activeTab === 'ateliers' || activeTab === 'ouvriers') && !workshopApi.hasError && (
           <div className="fixed bottom-6 right-6">
             <button 
@@ -700,7 +704,7 @@ export default function WorkshopComponents() {
           </div>
         </div>
 
-        {/* Statistiques rapides */}
+        {/* Statistiques rapides - CORRIGÉES avec statistiques ouvriers améliorées */}
         {!workshopApi.isLoading && !workshopApi.hasError && (
           <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
@@ -735,9 +739,17 @@ export default function WorkshopComponents() {
                 <div>
                   <p className="text-sm text-gray-600">Main d'œuvre</p>
                   <p className="text-2xl font-bold text-gray-900">{ouvriers.length}</p>
-                  <p className="text-xs text-gray-500">
-                    {ouvriers.filter(o => o.status === 'disponible').length} disponibles
-                  </p>
+                  {ouvriers.length > 0 ? (
+                    <div className="text-xs text-gray-500 space-x-2">
+                      <span className="text-green-600">{getOuvriersStats().disponibles} libres</span>
+                      <span className="text-yellow-600">{getOuvriersStats().occupes} occupés</span>
+                      {getOuvriersStats().absents > 0 && (
+                        <span className="text-gray-600">{getOuvriersStats().absents} absents</span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500">Aucun ouvrier</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -754,6 +766,41 @@ export default function WorkshopComponents() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Alertes et notifications pour les ouvriers en surcharge */}
+        {activeTab === 'ouvriers' && !workshopApi.isLoading && !workshopApi.hasError && ouvriers.length > 0 && (
+          <div className="mt-6">
+            {(() => {
+              const surcharges = ouvriers.filter(o => 
+                o.heuresJour && o.heuresMax && 
+                (o.heuresJour / o.heuresMax) >= 0.9
+              );
+              
+              const occupesSansTache = ouvriers.filter(o => 
+                o.statut === 'occupé' && !o.tacheActuelle?.trim()
+              );
+              
+              if (surcharges.length === 0 && occupesSansTache.length === 0) return null;
+              
+              return (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
+                    <h3 className="text-sm font-medium text-yellow-800">Alertes équipe</h3>
+                  </div>
+                  <div className="space-y-1 text-sm text-yellow-700">
+                    {surcharges.length > 0 && (
+                      <p>⚠️ {surcharges.length} ouvrier{surcharges.length > 1 ? 's' : ''} en surcharge de travail</p>
+                    )}
+                    {occupesSansTache.length > 0 && (
+                      <p>📋 {occupesSansTache.length} ouvrier{occupesSansTache.length > 1 ? 's' : ''} occupé{occupesSansTache.length > 1 ? 's' : ''} sans tâche spécifiée</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

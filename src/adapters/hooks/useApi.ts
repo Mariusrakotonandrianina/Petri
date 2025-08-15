@@ -1,4 +1,4 @@
-// src/adapters/hooks/useApi.ts - Hooks personnalisés pour l'API
+// src/adapters/hooks/useApi.ts - Correction de hasError
 import { useState, useCallback } from 'react';
 
 const API_BASE_URL = 'http://localhost:5000';
@@ -57,7 +57,6 @@ export const useApiCall = () => {
 
   return { makeApiCall, loading, error, clearError };
 };
-
 
 export const useMachinesApi = () => {
   const { makeApiCall, loading, error, clearError } = useApiCall();
@@ -224,38 +223,39 @@ export const useOutilsApi = () => {
 export const useOuvriersApi = () => {
   const { makeApiCall, loading, error, clearError } = useApiCall();
 
-  const getOuvriers = useCallback(async () => {
-    const response = await makeApiCall<any>('/ouvriers');
-    return Array.isArray(response) ? response : response.data || [];
+  const getOuvriers = useCallback(async (): Promise<Ouvrier[]> => {
+    const response = await makeApiCall<Ouvrier[]>('/ouvriers');
+    return Array.isArray(response) ? response : (response as any).data || [];
   }, [makeApiCall]);
 
-  const getOuvrier = useCallback(async (id: string | number) => {
-    return await makeApiCall<any>(`/ouvriers/${id}`);
+  const getOuvrier = useCallback(async (id: string | number): Promise<Ouvrier> => {
+    return await makeApiCall<Ouvrier>(`/ouvriers/${id}`);
   }, [makeApiCall]);
 
-  const createOuvrier = useCallback(async (ouvrierData: any) => {
-    return await makeApiCall<any>('/ouvriers', {
+  const createOuvrier = useCallback(async (ouvrierData: Partial<Ouvrier>): Promise<Ouvrier> => {
+    return await makeApiCall<Ouvrier>('/ouvriers', {
       method: 'POST',
       body: JSON.stringify(ouvrierData),
     });
   }, [makeApiCall]);
 
-  const updateOuvrier = useCallback(async (id: string | number, ouvrierData: any) => {
-    return await makeApiCall<any>(`/ouvriers/${id}`, {
+  const updateOuvrier = useCallback(async (id: string | number, ouvrierData: Partial<Ouvrier>): Promise<Ouvrier> => {
+    return await makeApiCall<Ouvrier>(`/ouvriers/${id}`, {
       method: 'PUT',
       body: JSON.stringify(ouvrierData),
     });
   }, [makeApiCall]);
 
-  const deleteOuvrier = useCallback(async (id: string | number) => {
-    return await makeApiCall<any>(`/ouvriers/${id}`, {
+  const deleteOuvrier = useCallback(async (id: string | number): Promise<void> => {
+    return await makeApiCall<void>(`/ouvriers/${id}`, {
       method: 'DELETE',
     });
   }, [makeApiCall]);
 
-  const toggleOuvrierDisponibilite = useCallback(async (id: string | number) => {
-    return await makeApiCall<any>(`/ouvriers/${id}/toggle-disponibilite`, {
+  const updateOuvrierStatut = useCallback(async (id: string | number, newStatut: StatutOuvrier): Promise<Ouvrier> => {
+    return await makeApiCall<Ouvrier>(`/ouvriers/${id}/statut`, {
       method: 'PATCH',
+      body: JSON.stringify({ statut: newStatut }),
     });
   }, [makeApiCall]);
 
@@ -265,34 +265,42 @@ export const useOuvriersApi = () => {
     createOuvrier,
     updateOuvrier,
     deleteOuvrier,
-    toggleOuvrierDisponibilite,
+    updateOuvrierStatut,
     loading,
     error,
     clearError,
   };
 };
 
+// CORRECTION PRINCIPALE ICI ⬇️
 export const useWorkshopApi = () => {
   const machinesApi = useMachinesApi();
   const outilsApi = useOutilsApi();
   const ouvriersApi = useOuvriersApi();
-  const ateliersApis = useAteliersApi();
+  const ateliersApi = useAteliersApi(); // Correction du nom aussi
 
-  const isLoading = machinesApi.loading || outilsApi.loading || ouvriersApi.loading || ateliersApis.loading;
-  const hasError = machinesApi.error || outilsApi.error || ouvriersApi.error || ateliersApis.error;
+  const isLoading = machinesApi.loading || outilsApi.loading || ouvriersApi.loading || ateliersApi.loading;
+  
+  // CORRECTION: Conversion explicite en booléen
+  const hasError = Boolean(
+    machinesApi.error || 
+    outilsApi.error || 
+    ouvriersApi.error || 
+    ateliersApi.error
+  );
 
   const clearAllErrors = useCallback(() => {
     machinesApi.clearError();
     outilsApi.clearError();
     ouvriersApi.clearError();
-    ateliersApis.clearError();
-  }, [machinesApi.clearError, outilsApi.clearError, ouvriersApi.clearError, ateliersApis.clearError]);
+    ateliersApi.clearError();
+  }, [machinesApi.clearError, outilsApi.clearError, ouvriersApi.clearError, ateliersApi.clearError]);
 
   return {
     machines: machinesApi,
     outils: outilsApi,
     ouvriers: ouvriersApi,
-    ateliers: ateliersApis,
+    ateliers: ateliersApi, // Correction du nom
     isLoading,
     hasError,
     clearAllErrors,
@@ -352,19 +360,20 @@ export interface Outil {
   updatedAt?: string;
 }
 
+export type NiveauOuvrier = 'Expert' | 'Confirmé' | 'Débutant';
+export type StatutOuvrier = 'disponible' | 'occupé' | 'absent'; // Correction: 'occupe' -> 'occupé'
+
 export interface Ouvrier {
-  disponible: boolean;
   id?: string | number;
   _id?: string;
   nom: string;
-  prenom: string;
-  niveau: 'Débutant' | 'Intermédiaire' | 'Expert';
   specialite: string;
-  tacheActuelle: string;
-  status: 'disponible' | 'occupé' | 'absent';
-  competences: string[];
+  niveau: NiveauOuvrier;
+  statut: StatutOuvrier;
+  tacheActuelle?: string | null;
   heuresJour: number;
   heuresMax: number;
+  competences: string[];
   createdAt?: string;
   updatedAt?: string;
 }
