@@ -24,7 +24,6 @@ export default function WorkshopEmptyState({
   const getIcon = () => {
     switch (activeTab) {
       case 'machines': return Settings;
-      case 'outils': return Wrench;
       case 'ouvriers': return Users;
       case 'ateliers': return Building2;
       default: return Settings;
@@ -70,12 +69,6 @@ export default function WorkshopEmptyState({
           title: "Aucun ouvrier trouvé",
           description: "Commencez par ajouter votre premier ouvrier à l'équipe.",
           buttonText: "Ajouter un ouvrier"
-        };
-      case 'outils':
-        return {
-          title: "Aucun outil trouvé",
-          description: "La gestion des outils sera disponible prochainement.",
-          buttonText: ""
         };
       default:
         return {

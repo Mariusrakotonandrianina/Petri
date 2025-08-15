@@ -2,7 +2,7 @@
 import { Plus } from "lucide-react";
 
 interface WorkshopFloatingButtonProps {
-  activeTab: 'machines' | 'outils' | 'ouvriers' | 'ateliers';
+  activeTab: 'machines' | 'ouvriers' | 'ateliers';
   hasError: boolean;
   isLoading: boolean;
   modalStates: {

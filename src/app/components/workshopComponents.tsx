@@ -14,7 +14,7 @@ import ApiConnectionIndicator from "./workshop/ApiConnectionIndicator";
 
 export default function WorkshopComponents() {
   // État principal
-  const [activeTab, setActiveTab] = useState<'machines' | 'outils' | 'ouvriers' | 'ateliers'>('machines');
+  const [activeTab, setActiveTab] = useState<'machines' | 'ouvriers' | 'ateliers'>('machines');
   
   // États des modales
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,7 +29,6 @@ export default function WorkshopComponents() {
   // États des données
   const [workshopData, setWorkshopData] = useState({
     machines: [] as Machine[],
-    outils: [] as Outil[],
     ouvriers: [] as Ouvrier[],
     ateliers: [] as Atelier[]
   });
@@ -49,10 +48,6 @@ export default function WorkshopComponents() {
           const machinesData = await workshopApi.machines.getMachines();
           setWorkshopData(prev => ({ ...prev, machines: machinesData }));
           break;
-        case 'outils':
-          const outilsData = await workshopApi.outils.getOutils();
-          setWorkshopData(prev => ({ ...prev, outils: outilsData }));
-          break;
         case 'ouvriers':
           const ouvriersData = await workshopApi.ouvriers.getOuvriers();
           setWorkshopData(prev => ({ ...prev, ouvriers: ouvriersData }));
@@ -70,16 +65,14 @@ export default function WorkshopComponents() {
   // Chargement complet des données (pour le refresh)
   const loadAllData = async () => {
     try {
-      const [machinesData, outilsData, ouvriersData, ateliersData] = await Promise.all([
+      const [machinesData, ouvriersData, ateliersData] = await Promise.all([
         workshopApi.machines.getMachines().catch(() => []),
-        workshopApi.outils.getOutils().catch(() => []),
         workshopApi.ouvriers.getOuvriers().catch(() => []),
         workshopApi.ateliers.getAteliers().catch(() => [])
       ]);
       
       setWorkshopData({
         machines: machinesData,
-        outils: outilsData,
         ouvriers: ouvriersData,
         ateliers: ateliersData
       });
@@ -89,7 +82,7 @@ export default function WorkshopComponents() {
   };
 
   // Gestionnaire de changement d'onglet
-  const handleTabChange = (tab: 'machines' | 'outils' | 'ouvriers' | 'ateliers') => {
+  const handleTabChange = (tab: 'machines' | 'ouvriers' | 'ateliers') => {
     setActiveTab(tab);
   };
 

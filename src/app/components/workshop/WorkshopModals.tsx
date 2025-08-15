@@ -5,7 +5,7 @@ import AtelierFormModal from "../AtelierFormModal";
 import OuvrierFormModal from "../OuvrierFormModal";
 
 interface WorkshopModalsProps {
-  activeTab: 'machines' | 'outils' | 'ouvriers' | 'ateliers';
+  activeTab: 'machines' | 'ouvriers' | 'ateliers';
   modalStates: {
     isModalOpen: boolean;
     isAtelierModalOpen: boolean;

@@ -1,11 +1,10 @@
 "use client";
 import { Settings, Users, Wrench, Building2 } from "lucide-react";
-import { Machine, Outil, Ouvrier, Atelier } from "../../../adapters/hooks/useApi";
+import { Machine, Ouvrier, Atelier } from "../../../adapters/hooks/useApi";
 
 interface WorkshopStatsProps {
   workshopData: {
     machines: Machine[];
-    outils: Outil[];
     ouvriers: Ouvrier[];
     ateliers: Atelier[];
   };
@@ -20,7 +19,7 @@ export default function WorkshopStats({ workshopData, isLoading, hasError }: Wor
   const getOuvriersStats = () => {
     const total = workshopData.ouvriers.length;
     const disponibles = workshopData.ouvriers.filter(o => o.statut === 'disponible').length;
-    const occupes = workshopData.ouvriers.filter(o => o.statut === 'occupé').length;
+    const occupes = workshopData.ouvriers.filter(o => o.statut === 'occupe').length;
     const absents = workshopData.ouvriers.filter(o => o.statut === 'absent').length;   
     
     return {
@@ -45,20 +44,6 @@ export default function WorkshopStats({ workshopData, isLoading, hasError }: Wor
             <p className="text-2xl font-bold text-gray-900">{workshopData.machines.length}</p>
             <p className="text-xs text-gray-500">
               {workshopData.machines.filter(m => m.status === 'active').length} actives
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      {/* Statistiques Outils */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-        <div className="flex items-center">
-          <Wrench className="w-8 h-8 text-orange-600 mr-3" />
-          <div>
-            <p className="text-sm text-gray-600">Outils</p>
-            <p className="text-2xl font-bold text-gray-900">{workshopData.outils.length}</p>
-            <p className="text-xs text-gray-500">
-              {workshopData.outils.filter(o => o.disponible).length} disponibles
             </p>
           </div>
         </div>

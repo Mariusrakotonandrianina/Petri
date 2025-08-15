@@ -1,14 +1,13 @@
 // src/app/components/workshop/WorkshopTabs.tsx
 "use client";
-import { Settings, Users, Wrench, Building2 } from "lucide-react";
-import { Machine, Outil, Ouvrier, Atelier } from "../../../adapters/hooks/useApi";
+import { Settings, Users, Building2 } from "lucide-react";
+import { Machine, Ouvrier, Atelier } from "../../../adapters/hooks/useApi";
 
 interface WorkshopTabsProps {
-  activeTab: 'machines' | 'outils' | 'ouvriers' | 'ateliers';
-  onTabChange: (tab: 'machines' | 'outils' | 'ouvriers' | 'ateliers') => void;
+  activeTab: 'machines' | 'ouvriers' | 'ateliers';
+  onTabChange: (tab: 'machines' | 'ouvriers' | 'ateliers') => void;
   workshopData: {
     machines: Machine[];
-    outils: Outil[];
     ouvriers: Ouvrier[];
     ateliers: Atelier[];
   };
@@ -19,8 +18,6 @@ export default function WorkshopTabs({ activeTab, onTabChange, workshopData }: W
     switch (tab) {
       case 'machines':
         return `Machines (${workshopData.machines.length})`;
-      case 'outils':
-        return `Outils (${workshopData.outils.length})`;
       case 'ouvriers':
         return `Main d'œuvre (${workshopData.ouvriers.length})`;
       case 'ateliers':
@@ -35,11 +32,6 @@ export default function WorkshopTabs({ activeTab, onTabChange, workshopData }: W
       id: 'machines' as const,
       icon: Settings,
       title: getTabTitle('machines')
-    },
-    {
-      id: 'outils' as const,
-      icon: Wrench,
-      title: getTabTitle('outils')
     },
     {
       id: 'ouvriers' as const,

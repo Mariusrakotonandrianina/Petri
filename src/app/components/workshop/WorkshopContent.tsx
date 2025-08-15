@@ -3,16 +3,14 @@ import { Machine, Outil, Ouvrier, Atelier } from "../../../adapters/hooks/useApi
 import WorkshopLoadingState from "./WorkshopLoadingState";
 import { WorkshopErrorState } from "./WorkshopErrorState"; // Correction ici - import nommé
 import MachinesList from "./MachinesList";
-import OutilsList from "./OutilsList";
 import OuvriersList from "./OuvriersList";
 import AteliersList from "./AteliersList";
 import WorkshopEmptyState from "./WorkshopEmptyState";
 
 interface WorkshopContentProps {
-  activeTab: 'machines' | 'outils' | 'ouvriers' | 'ateliers';
+  activeTab: 'machines' | 'ouvriers' | 'ateliers';
   workshopData: {
     machines: Machine[];
-    outils: Outil[];
     ouvriers: Ouvrier[];
     ateliers: Atelier[];
   };
@@ -38,7 +36,6 @@ export default function WorkshopContent({
   const getCurrentData = () => {
     switch (activeTab) {
       case 'machines': return workshopData.machines;
-      case 'outils': return workshopData.outils;
       case 'ouvriers': return workshopData.ouvriers;
       case 'ateliers': return workshopData.ateliers;
       default: return [];
@@ -53,7 +50,7 @@ export default function WorkshopContent({
       {/* Error State */}
       <WorkshopErrorState 
         hasError={workshopApi.hasError}
-        errorMessage={workshopApi.machines.error || workshopApi.outils.error || workshopApi.ouvriers.error || workshopApi.ateliers.error}
+        errorMessage={workshopApi.machines.error || workshopApi.ouvriers.error || workshopApi.ateliers.error}
         onClearError={handleClearError}
         onRefresh={onLoadData}
       />
@@ -77,16 +74,6 @@ export default function WorkshopContent({
           workshopApi={workshopApi}
           modalStates={modalStates}
           selectedItems={selectedItems}
-          onLoadData={onLoadData}
-        />
-      )}
-
-      {activeTab === 'outils' && (
-        <OutilsList
-          outils={workshopData.outils}
-          isLoading={workshopApi.isLoading}
-          hasError={workshopApi.hasError}
-          workshopApi={workshopApi}
           onLoadData={onLoadData}
         />
       )}
