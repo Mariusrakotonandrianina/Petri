@@ -1,6 +1,6 @@
 "use client";
 import { AlertCircle } from "lucide-react";
-import { Ouvrier } from "../../../adapters/hooks/useApi";
+import { Ouvrier } from "../../../adapters/hooks/useOuvrierApi";
 
 interface WorkshopAlertsProps {
   activeTab: string;

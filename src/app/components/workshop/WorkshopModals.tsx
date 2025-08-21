@@ -1,136 +1,48 @@
 "use client";
-import MachineFormModal from "../MachineFormModal";
 import AtelierFormModal from "../AtelierFormModal";
-import OuvrierFormModal from "../OuvrierFormModal";
 
-interface WorkshopModalsProps {
-  activeTab: 'machines' | 'ouvriers' | 'ateliers';
-  modalStates: {
-    isModalOpen: boolean;
-    isAtelierModalOpen: boolean;
-    isOuvrierModalOpen: boolean;
-    setIsModalOpen: (open: boolean) => void;
-    setIsAtelierModalOpen: (open: boolean) => void;
-    setIsOuvrierModalOpen: (open: boolean) => void;
-  };
-  selectedItems: {
-    selectedMachine: any;
-    selectedAtelier: any;
-    selectedOuvrier: any;
-    setSelectedMachine: (item: any) => void;
-    setSelectedAtelier: (item: any) => void;
-    setSelectedOuvrier: (item: any) => void;
-  };
+interface WorkshopModalsAteliersProps {
+  activeTab: 'ateliers';
+  modalStates: any;
+  selectedItems: any;
   workshopApi: any;
   onLoadData: () => void;
 }
 
-export default function WorkshopModals({
-  activeTab,
+export function WorkshopModalsAteliers({
   modalStates,
   selectedItems,
   workshopApi,
   onLoadData
-}: WorkshopModalsProps) {
+}: WorkshopModalsAteliersProps) {
   
-  const handleCloseModal = () => {
-    modalStates.setIsModalOpen(false);
-    selectedItems.setSelectedMachine(null);
-  };
-
-  const handleSubmitMachine = async (data: any) => {
-    try {
-      if (selectedItems.selectedMachine) {
-        const id = selectedItems.selectedMachine.id || selectedItems.selectedMachine._id;
-        await workshopApi.machines.updateMachine(id!, data);
-      } else {
-        await workshopApi.machines.createMachine(data);
-      }
-      
-      modalStates.setIsModalOpen(false);
-      selectedItems.setSelectedMachine(null);
-      await onLoadData();
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      throw error;
-    }
-  };
-
-  const handleCloseAtelierModal = () => {
-    modalStates.setIsAtelierModalOpen(false);
-    selectedItems.setSelectedAtelier(null);
-  };
-
-  const handleSubmitAtelier = async (data: any) => {
+  const handleAtelierSubmit = async (data: any) => {
     try {
       if (selectedItems.selectedAtelier) {
-        const id = selectedItems.selectedAtelier.id || selectedItems.selectedAtelier._id;
-        await workshopApi.ateliers.updateAtelier(id!, data);
+        // Mise à jour
+        await workshopApi.ateliers.updateAtelier(data.id, data);
       } else {
+        // Création
         await workshopApi.ateliers.createAtelier(data);
       }
-      
+      await onLoadData();
       modalStates.setIsAtelierModalOpen(false);
       selectedItems.setSelectedAtelier(null);
-      await onLoadData();
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde de l\'atelier:', error);
-      throw error;
-    }
-  };
-
-  const handleCloseOuvrierModal = () => {
-    modalStates.setIsOuvrierModalOpen(false);
-    selectedItems.setSelectedOuvrier(null);
-  };
-
-  const handleSubmitOuvrier = async (data: any) => {
-    try {
-      if (selectedItems.selectedOuvrier) {
-        const id = selectedItems.selectedOuvrier.id || selectedItems.selectedOuvrier._id;
-        await workshopApi.ouvriers.updateOuvrier(id!, data);
-      } else {
-        await workshopApi.ouvriers.createOuvrier(data);
-      }
-      
-      modalStates.setIsOuvrierModalOpen(false);
-      selectedItems.setSelectedOuvrier(null);
-      await onLoadData();
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde de l\'ouvrier:', error);
+      console.error('Erreur lors de la soumission de l\'atelier:', error);
       throw error;
     }
   };
 
   return (
-    <>
-      {activeTab === 'machines' && (
-        <MachineFormModal
-          isOpen={modalStates.isModalOpen}
-          onClose={handleCloseModal}
-          onSubmit={handleSubmitMachine}
-          machine={selectedItems.selectedMachine}
-          title={selectedItems.selectedMachine ? 'Modifier la machine' : 'Ajouter une machine'}
-        />
-      )}
-
-      {activeTab === 'ateliers' && (
-        <AtelierFormModal
-          isOpen={modalStates.isAtelierModalOpen}
-          onClose={handleCloseAtelierModal}
-          onSubmit={handleSubmitAtelier}
-          atelier={selectedItems.selectedAtelier}
-        />
-      )}
-
-      {activeTab === 'ouvriers' && (
-        <OuvrierFormModal
-          isOpen={modalStates.isOuvrierModalOpen}
-          onClose={handleCloseOuvrierModal}
-          onSubmit={handleSubmitOuvrier}
-          ouvrier={selectedItems.selectedOuvrier}
-        />
-      )}
-    </>
+    <AtelierFormModal
+      isOpen={modalStates.isAtelierModalOpen}
+      onClose={() => {
+        modalStates.setIsAtelierModalOpen(false);
+        selectedItems.setSelectedAtelier(null);
+      }}
+      onSubmit={handleAtelierSubmit}
+      atelier={selectedItems.selectedAtelier}
+    />
   );
 }

@@ -1,21 +1,6 @@
 import { Building2, MapPin, Ruler, Users, Edit2, Trash2, Power, CheckCircle, AlertCircle, Clock, Cog } from "lucide-react";
 import { useState } from "react";
-
-// Interface mise à jour pour correspondre au hook useAtelierApi
-interface Atelier {
-  id?: string | number;
-  _id?: string;
-  nom: string;
-  localisation: string;
-  superficie: number;
-  capaciteEmployes: number;
-  ouvrierActuelle?: number;
-  status: 'actif' | 'ferme' | 'maintenance';
-  usage?: string;
-  machinesAssociees?: string[];
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { Atelier } from "../../adapters/hooks/useAtelierApi"; // Import correct
 
 interface AtelierComponentProps {
   atelier: Atelier;
@@ -37,7 +22,7 @@ export default function AtelierComponent({
     switch (status?.toLowerCase()) {
       case "actif":
         return { color: "bg-green-100 text-green-800 border-green-200", icon: <CheckCircle className="w-4 h-4" />, label: "Actif" };
-      case "ferme":
+      case "ferme": // CORRECTION: 'ferme' au lieu de 'fermé'
         return { color: "bg-red-100 text-red-800 border-red-200", icon: <AlertCircle className="w-4 h-4" />, label: "Fermé" };
       case "maintenance":
         return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: <Clock className="w-4 h-4" />, label: "Maintenance" };
@@ -133,7 +118,7 @@ export default function AtelierComponent({
           </div>
         </div>
 
-        {/* Section Ouvriers Actuels - Nouvelle */}
+        {/* Section Ouvriers Actuels */}
         {typeof atelier.ouvrierActuelle !== 'undefined' && (
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">Ouvriers actuels</span>
@@ -149,7 +134,7 @@ export default function AtelierComponent({
           </div>
         )}
 
-        {/* Section Machines Associées - Nouvelle */}
+        {/* Section Machines Associées */}
         {atelier.machinesAssociees && atelier.machinesAssociees.length > 0 && (
           <div>
             <span className="text-sm font-medium text-gray-700 block mb-2">Machines associées</span>

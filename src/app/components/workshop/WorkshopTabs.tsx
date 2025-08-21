@@ -1,6 +1,8 @@
 "use client";
 import { Settings, Users, Building2 } from "lucide-react";
-import { Machine, Ouvrier, Atelier } from "../../../adapters/hooks/useApi";
+import { Machine } from "../../../adapters/hooks/useMachineApi";
+import { Ouvrier } from "../../../adapters/hooks/useOuvrierApi";
+import { Atelier } from "../../../adapters/hooks/useAtelierApi";
 
 interface WorkshopTabsProps {
   activeTab: 'machines' | 'ouvriers' | 'ateliers';

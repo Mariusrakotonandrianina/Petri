@@ -1,119 +1,72 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Atelier, useAtelierApi } from "../../adapters/hooks/useAtelierApi";
-
-import WorkshopHeader from "./workshop/WorkshopHeader";
-import WorkshopTabs from "./workshop/WorkshopTabs";
-import WorkshopContent from "./workshop/WorkshopContent";
-import WorkshopModals from "./workshop/WorkshopModals";
-import WorkshopStats from "./workshop/WorkshopStats";
-import WorkshopAlerts from "./workshop/WorkshopAlerts";
-import WorkshopFloatingButton from "./workshop/WorkshopFloatingButton";
-import ApiConnectionIndicator from "./workshop/ApiConnectionIndicator";
+import { Building2 } from "lucide-react";
+import { WorkshopModalsAteliers } from "./workshop/WorkshopModals";
+import { WorkshopStatsAteliers } from "./workshop/WorkshopStats";
+import { WorkshopContentAteliers } from "./workshop/WorkshopContent";
+import { WorkshopHeaderAteliers } from "./workshop/WorkshopHeader";
 
 export default function WorkshopComponents() {
-  const [activeTab, setActiveTab] = useState<'machines' | 'ouvriers' | 'ateliers'>('machines');
+  const [activeTab] = useState<'ateliers'>('ateliers'); // Seul onglet ateliers
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAtelierModalOpen, setIsAtelierModalOpen] = useState(false);
-  const [isOuvrierModalOpen, setIsOuvrierModalOpen] = useState(false);
-  
-  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const [selectedAtelier, setSelectedAtelier] = useState<Atelier | null>(null);
-  const [selectedOuvrier, setSelectedOuvrier] = useState<Ouvrier | null>(null);
   
   const [workshopData, setWorkshopData] = useState({
-    machines: [] as Machine[],
-    ouvriers: [] as Ouvrier[],
     ateliers: [] as Atelier[]
   });
 
-  const workshopApi = useWorkshopApi();
+  // Hook API pour les ateliers uniquement
+  const atelierApi = useAtelierApi();
+
+  // Objet workshopApi unifié pour compatibilité avec les composants existants
+  const workshopApi = {
+    ateliers: atelierApi,
+    isLoading: atelierApi.loading,
+    hasError: Boolean(atelierApi.error),
+    clearAllErrors: () => {
+      atelierApi.clearError();
+    }
+  };
 
   useEffect(() => {
     loadData();
-  }, [activeTab]);
+  }, []);
 
   const loadData = async () => {
     try {
-      switch (activeTab) {
-        case 'machines':
-          const machinesData = await workshopApi.machines.getMachines();
-          setWorkshopData(prev => ({ ...prev, machines: machinesData }));
-          break;
-        case 'ouvriers':
-          const ouvriersData = await workshopApi.ouvriers.getOuvriers();
-          setWorkshopData(prev => ({ ...prev, ouvriers: ouvriersData }));
-          break;
-        case 'ateliers':
-          const ateliersData = await workshopApi.ateliers.getAteliers();
-          setWorkshopData(prev => ({ ...prev, ateliers: ateliersData }));
-          break;
-      }
+      const ateliersData = await atelierApi.getAteliers();
+      setWorkshopData({ ateliers: ateliersData });
     } catch (err) {
-      console.error('Erreur lors du chargement des données:', err);
+      console.error('Erreur lors du chargement des ateliers:', err);
     }
-  };
-
-  const loadAllData = async () => {
-    try {
-      const [machinesData, ouvriersData, ateliersData] = await Promise.all([
-        workshopApi.machines.getMachines().catch(() => []),
-        workshopApi.ouvriers.getOuvriers().catch(() => []),
-        workshopApi.ateliers.getAteliers().catch(() => [])
-      ]);
-      
-      setWorkshopData({
-        machines: machinesData,
-        ouvriers: ouvriersData,
-        ateliers: ateliersData
-      });
-    } catch (err) {
-      console.error('Erreur lors du chargement complet:', err);
-    }
-  };
-
-  const handleTabChange = (tab: 'machines' | 'ouvriers' | 'ateliers') => {
-    setActiveTab(tab);
   };
 
   const handleRefresh = () => {
-    loadAllData();
+    loadData();
   };
 
   const modalStates = {
-    isModalOpen,
     isAtelierModalOpen,
-    isOuvrierModalOpen,
-    setIsModalOpen,
-    setIsAtelierModalOpen,
-    setIsOuvrierModalOpen
+    setIsAtelierModalOpen
   };
 
   const selectedItems = {
-    selectedMachine,
     selectedAtelier,
-    selectedOuvrier,
-    setSelectedMachine,
-    setSelectedAtelier,
-    setSelectedOuvrier
+    setSelectedAtelier
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <WorkshopHeader 
+        <WorkshopHeaderAteliers
           isLoading={workshopApi.isLoading}
           onRefresh={handleRefresh}
         />
 
-        <WorkshopTabs
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          workshopData={workshopData}
-        />
-
-        <WorkshopContent
+        {/* Contenu principal - ateliers uniquement */}
+        <WorkshopContentAteliers
           activeTab={activeTab}
           workshopData={workshopData}
           workshopApi={workshopApi}
@@ -122,28 +75,26 @@ export default function WorkshopComponents() {
           onLoadData={loadData}
         />
 
-        <WorkshopStats
+        <WorkshopStatsAteliers
           workshopData={workshopData}
           isLoading={workshopApi.isLoading}
           hasError={workshopApi.hasError}
         />
 
-        <WorkshopAlerts
-          activeTab={activeTab}
-          ouvriers={workshopData.ouvriers}
-          isLoading={workshopApi.isLoading}
-          hasError={workshopApi.hasError}
-        />
+        {/* Bouton flottant pour ajouter un atelier */}
+        <button
+          onClick={() => {
+            selectedItems.setSelectedAtelier(null);
+            modalStates.setIsAtelierModalOpen(true);
+          }}
+          disabled={workshopApi.hasError || workshopApi.isLoading}
+          className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors z-40 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Ajouter un atelier"
+        >
+          <Building2 className="w-6 h-6" />
+        </button>
 
-        <WorkshopFloatingButton
-          activeTab={activeTab}
-          hasError={workshopApi.hasError}
-          isLoading={workshopApi.isLoading}
-          modalStates={modalStates}
-          selectedItems={selectedItems}
-        />
-
-        <WorkshopModals
+        <WorkshopModalsAteliers
           activeTab={activeTab}
           modalStates={modalStates}
           selectedItems={selectedItems}
@@ -151,7 +102,17 @@ export default function WorkshopComponents() {
           onLoadData={loadData}
         />
 
-        <ApiConnectionIndicator hasError={workshopApi.hasError} />
+        {/* Indicateur de connexion API */}
+        <div className="fixed bottom-6 left-6 z-30">
+          <div className={`flex items-center px-3 py-2 rounded-lg text-xs font-medium ${
+            workshopApi.hasError 
+              ? 'bg-red-100 text-red-700 border border-red-200' 
+              : 'bg-green-100 text-green-700 border border-green-200'
+          }`}>
+            <Building2 className="w-3 h-3 mr-1" />
+            {workshopApi.hasError ? 'Erreur API' : 'API OK'}
+          </div>
+        </div>
       </div>
     </div>
   );

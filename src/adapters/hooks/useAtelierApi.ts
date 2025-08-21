@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback } from 'react';
 
-const API_BASE_URL = process.env.API_BASE_URL;
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
 
 export interface ApiResponse<T> {
   data?: T;

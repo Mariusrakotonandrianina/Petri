@@ -1,17 +1,13 @@
 "use client";
-import { Machine, Outil, Ouvrier, Atelier } from "../../../adapters/hooks/useApi";
+import { Atelier } from "../../../adapters/hooks/useAtelierApi";
 import WorkshopLoadingState from "./WorkshopLoadingState";
-import { WorkshopErrorState } from "./WorkshopErrorState"; // Correction ici - import nommé
-import MachinesList from "./MachinesList";
-import OuvriersList from "./OuvriersList";
+import { WorkshopErrorState } from "./WorkshopErrorState";
 import AteliersList from "./AteliersList";
 import WorkshopEmptyState from "./WorkshopEmptyState";
 
-interface WorkshopContentProps {
-  activeTab: 'machines' | 'ouvriers' | 'ateliers';
+interface WorkshopContentAteliersProps {
+  activeTab: 'ateliers';
   workshopData: {
-    machines: Machine[];
-    ouvriers: Ouvrier[];
     ateliers: Atelier[];
   };
   workshopApi: any;
@@ -20,26 +16,17 @@ interface WorkshopContentProps {
   onLoadData: () => void;
 }
 
-export default function WorkshopContent({
+export function WorkshopContentAteliers({
   activeTab,
   workshopData,
   workshopApi,
   modalStates,
   selectedItems,
   onLoadData
-}: WorkshopContentProps) {
+}: WorkshopContentAteliersProps) {
   
   const handleClearError = () => {
     workshopApi.clearAllErrors();
-  };
-
-  const getCurrentData = () => {
-    switch (activeTab) {
-      case 'machines': return workshopData.machines;
-      case 'ouvriers': return workshopData.ouvriers;
-      case 'ateliers': return workshopData.ateliers;
-      default: return [];
-    }
   };
 
   return (
@@ -50,7 +37,7 @@ export default function WorkshopContent({
       {/* Error State */}
       <WorkshopErrorState 
         hasError={workshopApi.hasError}
-        errorMessage={workshopApi.machines.error || workshopApi.ouvriers.error || workshopApi.ateliers.error}
+        errorMessage={workshopApi.ateliers.error}
         onClearError={handleClearError}
         onRefresh={onLoadData}
       />
@@ -58,49 +45,23 @@ export default function WorkshopContent({
       {/* Empty State */}
       <WorkshopEmptyState
         activeTab={activeTab}
-        currentData={getCurrentData()}
+        currentData={workshopData.ateliers}
         isLoading={workshopApi.isLoading}
         hasError={workshopApi.hasError}
         modalStates={modalStates}
         selectedItems={selectedItems}
       />
 
-      {/* Content based on active tab */}
-      {activeTab === 'machines' && (
-        <MachinesList
-          machines={workshopData.machines}
-          isLoading={workshopApi.isLoading}
-          hasError={workshopApi.hasError}
-          workshopApi={workshopApi}
-          modalStates={modalStates}
-          selectedItems={selectedItems}
-          onLoadData={onLoadData}
-        />
-      )}
-
-      {activeTab === 'ouvriers' && (
-        <OuvriersList
-          ouvriers={workshopData.ouvriers}
-          isLoading={workshopApi.isLoading}
-          hasError={workshopApi.hasError}
-          workshopApi={workshopApi}
-          modalStates={modalStates}
-          selectedItems={selectedItems}
-          onLoadData={onLoadData}
-        />
-      )}
-
-      {activeTab === 'ateliers' && (
-        <AteliersList
-          ateliers={workshopData.ateliers}
-          isLoading={workshopApi.isLoading}
-          hasError={workshopApi.hasError}
-          workshopApi={workshopApi}
-          modalStates={modalStates}
-          selectedItems={selectedItems}
-          onLoadData={onLoadData}
-        />
-      )}
+      {/* Ateliers List */}
+      <AteliersList
+        ateliers={workshopData.ateliers}
+        isLoading={workshopApi.isLoading}
+        hasError={workshopApi.hasError}
+        workshopApi={workshopApi}
+        modalStates={modalStates}
+        selectedItems={selectedItems}
+        onLoadData={onLoadData}
+      />
     </div>
   );
 }
