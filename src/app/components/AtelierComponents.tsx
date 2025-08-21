@@ -1,14 +1,18 @@
-// src/app/components/AtelierComponent.tsx
-import { Building2, MapPin, Ruler, Users, Edit2, Trash2, Power, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { Building2, MapPin, Ruler, Users, Edit2, Trash2, Power, CheckCircle, AlertCircle, Clock, Cog } from "lucide-react";
 import { useState } from "react";
 
+// Interface mise à jour pour correspondre au hook useAtelierApi
 interface Atelier {
-  _id: string;
+  id?: string | number;
+  _id?: string;
   nom: string;
   localisation: string;
   superficie: number;
   capaciteEmployes: number;
-  status: string;
+  ouvrierActuelle?: number;
+  status: 'actif' | 'ferme' | 'maintenance';
+  usage?: string;
+  machinesAssociees?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -33,7 +37,7 @@ export default function AtelierComponent({
     switch (status?.toLowerCase()) {
       case "actif":
         return { color: "bg-green-100 text-green-800 border-green-200", icon: <CheckCircle className="w-4 h-4" />, label: "Actif" };
-      case "fermé":
+      case "ferme":
         return { color: "bg-red-100 text-red-800 border-red-200", icon: <AlertCircle className="w-4 h-4" />, label: "Fermé" };
       case "maintenance":
         return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: <Clock className="w-4 h-4" />, label: "Maintenance" };
@@ -53,7 +57,7 @@ export default function AtelierComponent({
     if (window.confirm(`Supprimer définitivement l'atelier "${atelier.nom}" ?`)) {
       setIsDeleting(true);
       try {
-        await onDelete(atelier._id);
+        await onDelete(atelier._id || String(atelier.id) || '');
       } finally {
         setIsDeleting(false);
       }
@@ -64,7 +68,7 @@ export default function AtelierComponent({
     if (isToggling) return;
     setIsToggling(true);
     try {
-      await onToggleStatus(atelier._id);
+      await onToggleStatus(atelier._id || String(atelier.id) || '');
     } finally {
       setIsToggling(false);
     }
@@ -85,6 +89,11 @@ export default function AtelierComponent({
             <p className="text-sm text-gray-600 flex items-center">
               <MapPin className="w-4 h-4 mr-1" /> {atelier.localisation}
             </p>
+            {atelier.usage && (
+              <p className="text-xs text-gray-500 flex items-center mt-1">
+                <Cog className="w-3 h-3 mr-1" /> {atelier.usage}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex space-x-1">
@@ -123,6 +132,36 @@ export default function AtelierComponent({
             <span className="text-xs text-gray-600"> employés</span>
           </div>
         </div>
+
+        {/* Section Ouvriers Actuels - Nouvelle */}
+        {typeof atelier.ouvrierActuelle !== 'undefined' && (
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">Ouvriers actuels</span>
+            <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${
+              atelier.ouvrierActuelle > atelier.capaciteEmployes 
+                ? 'bg-red-100 text-red-800'
+                : atelier.ouvrierActuelle === atelier.capaciteEmployes
+                ? 'bg-orange-100 text-orange-800'
+                : 'bg-green-100 text-green-800'
+            }`}>
+              {atelier.ouvrierActuelle} / {atelier.capaciteEmployes}
+            </span>
+          </div>
+        )}
+
+        {/* Section Machines Associées - Nouvelle */}
+        {atelier.machinesAssociees && atelier.machinesAssociees.length > 0 && (
+          <div>
+            <span className="text-sm font-medium text-gray-700 block mb-2">Machines associées</span>
+            <div className="space-y-1">
+              {atelier.machinesAssociees.map((machine, index) => (
+                <div key={index} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded inline-block mr-1 mb-1">
+                  {machine}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
@@ -135,6 +174,20 @@ export default function AtelierComponent({
           {isToggling ? "Changement en cours..." : "Changer le statut"}
         </button>
       </div>
+
+      {/* Footer avec dates */}
+      {(atelier.createdAt || atelier.updatedAt) && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="flex justify-between text-xs text-gray-500">
+            {atelier.createdAt && (
+              <span>Créé: {new Date(atelier.createdAt).toLocaleDateString()}</span>
+            )}
+            {atelier.updatedAt && (
+              <span>Modifié: {new Date(atelier.updatedAt).toLocaleDateString()}</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

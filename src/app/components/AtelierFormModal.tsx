@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Building2, MapPin, Users, Ruler, X, Save, AlertCircle, Info } from "lucide-react";
+import { Building2, X, Save, AlertCircle, Info } from "lucide-react";
 
 interface Atelier {
   id?: string | number;

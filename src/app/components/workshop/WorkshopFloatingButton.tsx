@@ -25,7 +25,6 @@ export default function WorkshopFloatingButton({
   selectedItems
 }: WorkshopFloatingButtonProps) {
   
-  // Seuls les onglets avec formulaires de création affichent le bouton
   const showButton = ['machines', 'ateliers', 'ouvriers'].includes(activeTab) && !hasError;
   
   if (!showButton) return null;

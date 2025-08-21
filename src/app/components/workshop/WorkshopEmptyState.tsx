@@ -1,5 +1,5 @@
 "use client";
-import { Plus, Settings, Users, Wrench, Building2 } from "lucide-react";
+import { Plus, Settings, Users, Building2 } from "lucide-react";
 
 interface WorkshopEmptyStateProps {
   activeTab: string;

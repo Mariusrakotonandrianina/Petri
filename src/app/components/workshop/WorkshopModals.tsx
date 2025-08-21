@@ -1,4 +1,3 @@
-// src/app/components/workshop/WorkshopModals.tsx
 "use client";
 import MachineFormModal from "../MachineFormModal";
 import AtelierFormModal from "../AtelierFormModal";
@@ -34,7 +33,6 @@ export default function WorkshopModals({
   onLoadData
 }: WorkshopModalsProps) {
   
-  // Handlers pour machines
   const handleCloseModal = () => {
     modalStates.setIsModalOpen(false);
     selectedItems.setSelectedMachine(null);
@@ -58,7 +56,6 @@ export default function WorkshopModals({
     }
   };
 
-  // Handlers pour ateliers
   const handleCloseAtelierModal = () => {
     modalStates.setIsAtelierModalOpen(false);
     selectedItems.setSelectedAtelier(null);
@@ -82,7 +79,6 @@ export default function WorkshopModals({
     }
   };
 
-  // Handlers pour ouvriers
   const handleCloseOuvrierModal = () => {
     modalStates.setIsOuvrierModalOpen(false);
     selectedItems.setSelectedOuvrier(null);
@@ -108,7 +104,6 @@ export default function WorkshopModals({
 
   return (
     <>
-      {/* Modal de création/modification de machine */}
       {activeTab === 'machines' && (
         <MachineFormModal
           isOpen={modalStates.isModalOpen}
@@ -119,7 +114,6 @@ export default function WorkshopModals({
         />
       )}
 
-      {/* Modal de création/modification d'atelier */}
       {activeTab === 'ateliers' && (
         <AtelierFormModal
           isOpen={modalStates.isAtelierModalOpen}
@@ -129,7 +123,6 @@ export default function WorkshopModals({
         />
       )}
 
-      {/* Modal de création/modification d'ouvrier */}
       {activeTab === 'ouvriers' && (
         <OuvrierFormModal
           isOpen={modalStates.isOuvrierModalOpen}

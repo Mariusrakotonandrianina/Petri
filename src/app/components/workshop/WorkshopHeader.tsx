@@ -13,10 +13,10 @@ export default function WorkshopHeader({ isLoading, onRefresh }: WorkshopHeaderP
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Interface Atelier Automobile
+            Interface Atelier
           </h1>
           <p className="text-gray-600">
-            Gestion complète avec API - Machines, Outils, Main d'œuvre et Ateliers
+            Gestion complète - Machines, Outils, Main d'œuvre et Ateliers
           </p>
         </div>
         <button

@@ -1,4 +1,3 @@
-// src/app/components/workshop/WorkshopTabs.tsx
 "use client";
 import { Settings, Users, Building2 } from "lucide-react";
 import { Machine, Ouvrier, Atelier } from "../../../adapters/hooks/useApi";

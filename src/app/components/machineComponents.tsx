@@ -229,7 +229,7 @@ export default function MachineComponent({
               <span className="text-xs font-medium text-gray-600">Capacité</span>
             </div>
             <span className="text-lg font-bold text-gray-900">{machine.capacite || 0}</span>
-            <span className="text-xs text-gray-600">u/h</span>
+            <span className="text-xs text-gray-600">h</span>
           </div>
           
           <div className="text-center p-3 bg-gray-50 rounded-lg">
@@ -237,7 +237,7 @@ export default function MachineComponent({
               <span className="text-xs font-medium text-gray-600">Effective</span>
             </div>
             <span className="text-lg font-bold text-gray-900">{getEffectiveCapacity()}</span>
-            <span className="text-xs text-gray-600">u/h</span>
+            <span className="text-xs text-gray-600">h</span>
           </div>
         </div>
 

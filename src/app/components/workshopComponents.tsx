@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useWorkshopApi, Machine, Outil, Ouvrier, Atelier } from "../../adapters/hooks/useApi";
+import { Atelier, useAtelierApi } from "../../adapters/hooks/useAtelierApi";
 
-// Import des composants modulaires du dossier workshop
 import WorkshopHeader from "./workshop/WorkshopHeader";
 import WorkshopTabs from "./workshop/WorkshopTabs";
 import WorkshopContent from "./workshop/WorkshopContent";
@@ -13,30 +12,24 @@ import WorkshopFloatingButton from "./workshop/WorkshopFloatingButton";
 import ApiConnectionIndicator from "./workshop/ApiConnectionIndicator";
 
 export default function WorkshopComponents() {
-  // État principal
   const [activeTab, setActiveTab] = useState<'machines' | 'ouvriers' | 'ateliers'>('machines');
   
-  // États des modales
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAtelierModalOpen, setIsAtelierModalOpen] = useState(false);
   const [isOuvrierModalOpen, setIsOuvrierModalOpen] = useState(false);
   
-  // États des éléments sélectionnés
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const [selectedAtelier, setSelectedAtelier] = useState<Atelier | null>(null);
   const [selectedOuvrier, setSelectedOuvrier] = useState<Ouvrier | null>(null);
   
-  // États des données
   const [workshopData, setWorkshopData] = useState({
     machines: [] as Machine[],
     ouvriers: [] as Ouvrier[],
     ateliers: [] as Atelier[]
   });
 
-  // Hook API
   const workshopApi = useWorkshopApi();
 
-  // Chargement initial des données
   useEffect(() => {
     loadData();
   }, [activeTab]);
@@ -62,7 +55,6 @@ export default function WorkshopComponents() {
     }
   };
 
-  // Chargement complet des données (pour le refresh)
   const loadAllData = async () => {
     try {
       const [machinesData, ouvriersData, ateliersData] = await Promise.all([
@@ -81,17 +73,14 @@ export default function WorkshopComponents() {
     }
   };
 
-  // Gestionnaire de changement d'onglet
   const handleTabChange = (tab: 'machines' | 'ouvriers' | 'ateliers') => {
     setActiveTab(tab);
   };
 
-  // Gestionnaire de refresh
   const handleRefresh = () => {
     loadAllData();
   };
 
-  // Objets de configuration pour passer aux composants
   const modalStates = {
     isModalOpen,
     isAtelierModalOpen,
@@ -113,20 +102,17 @@ export default function WorkshopComponents() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header avec titre et bouton de refresh */}
         <WorkshopHeader 
           isLoading={workshopApi.isLoading}
           onRefresh={handleRefresh}
         />
 
-        {/* Onglets de navigation */}
         <WorkshopTabs
           activeTab={activeTab}
           onTabChange={handleTabChange}
           workshopData={workshopData}
         />
 
-        {/* Contenu principal selon l'onglet actif */}
         <WorkshopContent
           activeTab={activeTab}
           workshopData={workshopData}
@@ -136,14 +122,12 @@ export default function WorkshopComponents() {
           onLoadData={loadData}
         />
 
-        {/* Statistiques générales */}
         <WorkshopStats
           workshopData={workshopData}
           isLoading={workshopApi.isLoading}
           hasError={workshopApi.hasError}
         />
 
-        {/* Alertes et notifications (spécifiques aux ouvriers) */}
         <WorkshopAlerts
           activeTab={activeTab}
           ouvriers={workshopData.ouvriers}
@@ -151,7 +135,6 @@ export default function WorkshopComponents() {
           hasError={workshopApi.hasError}
         />
 
-        {/* Bouton flottant d'ajout */}
         <WorkshopFloatingButton
           activeTab={activeTab}
           hasError={workshopApi.hasError}
@@ -160,7 +143,6 @@ export default function WorkshopComponents() {
           selectedItems={selectedItems}
         />
 
-        {/* Modales de création/modification */}
         <WorkshopModals
           activeTab={activeTab}
           modalStates={modalStates}
@@ -169,7 +151,6 @@ export default function WorkshopComponents() {
           onLoadData={loadData}
         />
 
-        {/* Indicateur de connexion API */}
         <ApiConnectionIndicator hasError={workshopApi.hasError} />
       </div>
     </div>
